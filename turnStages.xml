@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<turnStages>
+	<turnStage name="insideReverse1" function="wait" next="insideRevers2" timeout="300">
+		<parameter type="bool" value="false"/>
+		<parameter type="bool" value="false"/>
+	</turnStage>
+	<turnStage name="insideReverse2" function="backwards">
+		<parameter type="bool" value="true"/>
+		<parameter type="int" value="30"/>
+		<parameter type="int" value="90"/>
+	</turnStage>
+	<turnStage name="insideReverse1" function="wait" next="insideRevers2" timeout="300">
+		<parameter type="bool" value="true"/>
+	</turnStage>
+</turnStages>
