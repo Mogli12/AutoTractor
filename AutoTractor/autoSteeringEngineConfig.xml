@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<ASEGlobals>
+    <aiSteering type="float" value="1.000000" />
+    <aiSteering2 type="float" value="-0.500000" />
+    <!--aiSteering2 type="float" value="1.000000" /-->
+    <aiSteering3 type="float" value="-0.300000" />
+    <!--aiSteering3 type="float" value="0.500000" /-->
+		<angleOutsideFactor type="float" value="1" />
+		<angleInsideFactor  type="float" value="1" />
+		<angleInsideFactor2 type="float" value="1" />
+    <!--angleSafety type="float" value="0.800000" /-->
+    <angleSafety type="float" value="0.8" />
+    <artAxisMode value="1" />
+    <artAxisRot type="float" value="0.500000" />
+    <artAxisShift type="float" value="-0.500000" />
+    <average type="float" value="1" />
+    <angleStep type="degree" value="15" />
+    <chainDivide value="10" />
+    <chainDivide2 value="4" />
+    <chainSplit value="0" />
+    <chainFactor1 type="float" value="1" />
+    <chainLen     type="float" value="1.5" />
+    <chainLenInc  type="float" value="2.0" />
+    <chainLenMax  type="float" value="99" />
+    <chain2Len    type="float" value="4.0" />
+    <chain2LenInc type="float" value="2.0" />
+    <chain2LenMax type="float" value="99" />
+    <chainMax value="6" />
+    <chainFix value="5" />
+    <chainMin value="4" />
+    <chainAvg value="1" />
+		<chainBorder value="2" />
+		<chainStart value="1" />
+		<maxDetectWidth value="5" />
+		<maxDetectWidth2 value="5" />
+		<lookAhead value="0" />
+		<lookAheadFix value="1" />
+		<stepBack value="99" />
+		<repeatBack type="bool" value="true" />
+		<chainAvgFix type="bool" value="true" />
+		<shiftFixZ type="bool" value="false" />
+		<colliMask type="bool" value="true" />
+		<colliStep type="float" value="0.200000" />
+		<ignoreDist type="float" value="0.5" />
+    <maxLooking type="degree" value="32" />
+    <minLooking type="degree" value="3" />
+    <maxRotation type="degree" value="45" />
+		<minRadius type="float" value="5" />
+    <minLength type="float" value="0.25" />
+    <minMidDist type="float" value="1.0" />
+    <offtracking value="2" />
+    <reverseDir type="bool" value="false" />
+    <roueSupport type="bool" value="false" />
+		<zeroWidth type="bool" value="true" />
+    <stepLog2 value="2" />
+    <!--widthDec type="float" value="0.0050000" /-->
+    <widthDec type="float" value="0.006" />
+    <yieldCount value="300" />
+		<zeroAngle type="bool" value="true" />
+		<getIsHired type="bool" value="true" />
+		<widthOffset type="float" value="0.8" />
+		<yieldDivide value="-2" />
+		<angleOffset type="degree" value="0" />
+		<smoothFactor type="float" value="0.2" />
+		<smoothMax type="float" value="0.45" />
+		<limitOutside type="bool" value="true" />
+		<limitInside type="bool" value="true" />
+		<algorithm value="1" />
+		<!--fruitBufferSq type="float" value="0.04" /-->
+		<fruitBufferSq type="float" value="-1" />
+		<maxDtSum value="65" /> <!-- 10 fps => 100 ms divide by 1.5 for statistics reason => dt=66.67 ms  -->
+		<maxDtDist type="float" value="0.03434844" /> <!-- 10 km/h => 2.78 m/s => 0.278 m @ 10 fps; divide by 1.5 and square-->
+</ASEGlobals>
