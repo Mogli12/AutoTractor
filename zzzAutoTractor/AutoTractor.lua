@@ -820,17 +820,28 @@ function AutoTractor:update(dt)
 	if      self.isEntered 
 			and self.isClient 
 			and self:getIsActive() 
-			and self.acParameters ~= nil
-			and self.acParameters.enabled
 			and self.atMogliInitDone 
 			and self.atHud.GuiActive then	
-		if      ASEGlobals.showTrace > 0 
-				and self.acDimensions ~= nil
-				and ( self.isAITractorActivated or self.acTurnStage >= 98 ) then	
-			AutoSteeringEngine.drawLines( self );
-		else
-			AutoTractor.checkState( self )
-			AutoSteeringEngine.drawMarker( self );
+
+		if self.acParameters ~= nil and self.acParameters.enabled then
+			
+			if      ASEGlobals.showTrace > 0 
+					and self.acDimensions ~= nil
+					and ( self.isAITractorActivated or self.acTurnStage >= 98 ) then	
+				AutoSteeringEngine.drawLines( self );
+			else
+				AutoTractor.checkState( self )
+				AutoSteeringEngine.drawMarker( self );
+			end
+		elseif ASEGlobals.showTrace > 0 then		
+			for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
+				if self[marker] ~= nil then
+					local x,y,z = getWorldTranslation( self[marker] )
+					y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 1, z)
+					drawDebugLine(  x,y,z, 0,1,0, x,y+2,z, 0,1,0 );
+					drawDebugPoint( x,y+2,z	, 1, 1, 1, 1 )
+				end
+			end
 		end
 	end
 	
@@ -1027,9 +1038,21 @@ function AutoTractor:newGetIsHired( superFunc, ... )
 	end
 end
 
-function AutoTractor:newUpdateToolsInfo( ... )
-	if self.acParameters ~= nil and self.acParameters.enabled then 
+function AutoTractor:newUpdateToolsInfo( superFunc, ... )
+	self.atShiftAiMarker = false
+	superFunc( self, ... )
+	
+	if     self.acParameters ~= nil and self.acParameters.enabled then 
 		AutoSteeringEngine.checkTools( self, true )
+	else--if self.acParameters ~= nil and self.acParameters.headland then 
+		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
+			if self[marker] ~= nil then
+				self.atShiftAiMarker = true
+				local node = createTransformGroup( "shifted_"..marker )
+				link( self[marker], node )
+				self[marker] = node 
+			end
+		end
 	end
 end
 
@@ -1284,44 +1307,16 @@ end
 -- AutoTractor.shiftAIMarker
 ------------------------------------------------------------------------
 function AutoTractor:shiftAIMarker()
-	if self.acParameters ~= nil and self.acParameters.headland then 
-		if self.aiMarkerBackup == nil then 
-			AutoTractor.checkState( self )
-			self.aiMarkerBackup = {} 
-			
-			for _,marker in pairs( {"aiLeftMarker","aiRightMarker","aiBackMarker"} ) do
-				local tool = self 
-				if tool[marker] ~= nil then  
-					self.aiMarkerBackup[tool] = true
-					local node = createTransformGroup( "shifted_"..marker )
-					link( tool[marker], node )
-					tool[marker] = node 
-				end 
-				
-				for _,implement in pairs(self.attachedImplements) do
-					tool = implement.object
-					if tool ~= nil then 
-						if tool[marker] ~= nil then  
-							self.aiMarkerBackup[tool] = true
-							local node = createTransformGroup( "shifted_"..marker )
-							link( tool[marker], node )
-							tool[marker] = node 
-						end 
-					end 
-				end 
-			end 
+	if self.atShiftAiMarker then 
+		local h = 0
+		
+		if self.turnStage == 0 and ( self.acParameters ~= nil and self.acParameters.headland ) then 
+			h = self.acDimensions.headlandDist 
 		end 
 		
-		local h = self.acDimensions.headlandDist 
-		if self.turnStage ~= 0 then 
-			h = 0 
-		end 
-			
-		for tool,flag in pairs( self.aiMarkerBackup ) do 
-			for _,marker in pairs( {"aiLeftMarker","aiRightMarker","aiBackMarker"} ) do 						
-				setTranslation( tool[marker], 0, 0, h )
-			end 
-		end 
+		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
+			setTranslation( self[marker], 0, 0, h )
+		end 		
 	end 
 end 
 
@@ -1329,19 +1324,11 @@ end
 -- AutoTractor.resetAIMarker
 ------------------------------------------------------------------------
 function AutoTractor:resetAIMarker()
-	if self.aiMarkerBackup ~= nil then 	
-		for tool,flag in pairs( self.aiMarkerBackup ) do 
-			for _,marker in pairs( {"aiLeftMarker","aiRightMarker","aiBackMarker"} ) do 						
-				if tool[marker] ~= nil then 
-					local node = tool[marker]
-					tool[marker] = getParent( node )
-					delete( node )
-				end 
-			end 
-		end 
-				
-		self.aiMarkerBackup = nil
-	end
+	if self.atShiftAiMarker then 
+		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
+			setTranslation( self[marker], 0, 0, 0 )
+		end 		
+	end 		
 end 
 
 ------------------------------------------------------------------------
@@ -2395,14 +2382,11 @@ function AutoTractor.test4( self )
 end
 
 AITractor.updateTick = Utils.overwrittenFunction( AITractor.updateTick, AutoTractor.newUpdateTick );
-AITractor.updateToolsInfo = Utils.appendedFunction( AITractor.updateToolsInfo, AutoTractor.newUpdateToolsInfo ); 
+AITractor.updateToolsInfo = Utils.overwrittenFunction( AITractor.updateToolsInfo, AutoTractor.newUpdateToolsInfo ); 
 AITractor.startAITractor = Utils.overwrittenFunction( AITractor.startAITractor, AutoTractor.newStartAITractor );
 AITractor.stopAITractor = Utils.overwrittenFunction( AITractor.stopAITractor, AutoTractor.newStopAITractor );
 AITractor.canStartAITractor = Utils.overwrittenFunction( AITractor.canStartAITractor, AutoTractor.newCanStartAITractor )
 AITractor.getIsAITractorAllowed = Utils.overwrittenFunction( AITractor.getIsAITractorAllowed, AutoTractor.newGetIsAITractorAllowed );
 AITractor.updateAIMovement = Utils.overwrittenFunction( AITractor.updateAIMovement, AutoTractor.newUpdateAIMovement );	
-
---AITractor.attachImplement = Utils.appendedFunction( AITractor.attachImplement, AutoTractor.newAttachImplement )
---AITractor.detachImplement = Utils.appendedFunction( AITractor.detachImplement, AutoTractor.newDetachImplement )
 
 --Vehicle.getIsHired = Utils.overwrittenFunction( Vehicle.getIsHired, AutoTractor.newGetIsHired );

@@ -138,12 +138,12 @@ end
 ------------------------------------------------------------------------
 function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 
-	local dt = self.acDtSum
-
 	if not self.isServer or self.acParameters == nil or not self.acParameters.enabled then
 		return superFunc( self, dt, ... );
 	end
 	
+	local dt = self.acDtSum
+
 	AutoTractor.statEvent( self, "t0", dt )
 
 	AutoTractor.checkState( self )
