@@ -15,7 +15,7 @@
     <artAxisShift type="float" value="-0.500000" />
     <average type="float" value="1" />
     <angleStep type="degree" value="15" />
-    <chainDivide value="10" />
+    <chainDivide value="7" />
     <chainDivide2 value="4" />
     <chainSplit value="0" />
     <chainFactor1 type="float" value="1" />

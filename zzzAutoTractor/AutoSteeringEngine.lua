@@ -426,6 +426,20 @@ function AutoSteeringEngine.processChainNewGetBorder( vehicle, nodes, index, lev
 end
 
 ------------------------------------------------------------------------
+-- processChainLevelAngle
+------------------------------------------------------------------------
+function AutoSteeringEngine.processChainLevelAngle( vehicle, factor )
+	if factor < -1 or factor > 1 then
+		return factor 
+	elseif factor < 0 then
+		return - factor * factor 
+	else
+		return factor * factor
+	end
+	return 0
+end
+
+------------------------------------------------------------------------
 -- processChainLevel
 ------------------------------------------------------------------------
 function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, lookAheadM, lookAheadP, checkAllDist )
@@ -464,7 +478,7 @@ function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, lookA
 		
 	while a <= 1 do
 		local node    = {}
-		node.angle    = a
+		node.angle    = AutoSteeringEngine.processChainLevelAngle( vehicle, a )
 		if lookAheadM == lookAheadP then
 			node.lookAhead = lookAheadM
 		else
