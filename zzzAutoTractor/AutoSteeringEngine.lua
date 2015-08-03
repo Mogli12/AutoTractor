@@ -33,7 +33,8 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.angleSafety  = 0
 	ASEGlobals.maxLooking   = 0
 	ASEGlobals.minLooking   = 0
-	ASEGlobals.maxRotation  = 0
+	ASEGlobals.maxRotationC = 0
+	ASEGlobals.maxRotationU = 0
 	ASEGlobals.minRadius    = 0
 	ASEGlobals.aiSteering   = 0
 	ASEGlobals.aiSteering2  = 0
@@ -78,6 +79,7 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.maxDtSum      = 0
 	ASEGlobals.maxDtDist     = 0
 	ASEGlobals.showStat      = 0
+	ASEGlobals.ploughTransport = 0
 	
 	local file
 	file = ASECurrentModDir.."autoSteeringEngineConfig.xml"
@@ -250,6 +252,22 @@ function AutoSteeringEngine.getAllChainBordersLocalBuffer( vehicle, buffer, i, i
 	return bi,ti,di
 end
 	
+------------------------------------------------------------------------
+-- getIsAtEnd
+------------------------------------------------------------------------
+function AutoSteeringEngine.getIsAtEnd( vehicle )
+	local atEnd = true
+	
+	for i=2,ASEGlobals.chainMax do 
+		if vehicle.aseChain.nodes[i].isField then
+			atEnd = false
+			break
+		end
+	end
+	
+	return atEnd
+end
+		
 ------------------------------------------------------------------------
 -- getChainResult
 ------------------------------------------------------------------------
@@ -468,10 +486,16 @@ function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, lookA
 	local delta      = 1.0 / math.floor( 0.5 + ASEGlobals.chainDivide	- level / ASEGlobals.chainMax * ( ASEGlobals.chainDivide2 - ASEGlobals.chainDivide ) )
 	local a          = -1
 	local minA       = nil
-	local targetA    = -Utils.getNoNil( angles[level-1], 0 )
+	local targetA    = 0 -- -Utils.getNoNil( angles[level-1], 0 )
 	local inside     = nil
 	local nxt        = nil
-		
+
+	if vehicle.aseLastBestAngle == nil then
+		vehicle.aseLastBestAngle = {}
+	elseif vehicle.aseLastBestAngle[level] ~= nil then
+		targetA = vehicle.aseLastBestAngle[level]
+	end
+	
 	if table.getn( angles ) < 1 then
 		delta = delta * ASEGlobals.chainFactor1 
 	end
@@ -582,6 +606,7 @@ function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, lookA
 					newAngles[i] = AutoSteeringEngine.processChainNewGetAngle( nodes, mid, level, i, level+round )
 				end
 			end
+			vehicle.aseLastBestAngle[level] = newAngles[level]
 			return b, detected, newAngles
 		elseif detected then
 			break
@@ -596,6 +621,7 @@ function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, lookA
 		end
 		local b, d = AutoSteeringEngine.processChainNewGetBorder( vehicle, nodes, nxt, level, upToLevel, round )
 		if b > 0 then
+			vehicle.aseLastBestAngle[level] = newAngles[level]
 			return b, true, newAngles
 		end
 		detected = detected or d
@@ -603,12 +629,15 @@ function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, lookA
 		b, d, t = AutoSteeringEngine.processChainLevel( vehicle, newAngles, upToLevel, lookAheadM, lookAheadP, checkAllDist )
 		detected = detected or d
 		if b <= 0 or nodes[nxt].outside == nil then	
+			vehicle.aseLastBestAngle[level] = t[level]
 			return b, detected, t 
 		end
 		nxt = nodes[nxt].outside
 	end
 	
 	print("ERROR: We should never come here")
+	
+	vehicle.aseLastBestAngle[level] = nil
 	return 99, false, angles
 
 end
@@ -1220,6 +1249,7 @@ function AutoSteeringEngine.checkTools( vehicle, reset )
 		AutoSteeringEngine.resetFrontPacker( vehicle )
 		AutoSteeringEngine.deleteTools( vehicle )
 		vehicle.aseCollisions = nil
+		vehicle.aseLastBestAngle = nil
 		
 		AutoSteeringEngine.addToolsRec( vehicle, vehicle )
 		
@@ -1353,11 +1383,13 @@ function AutoSteeringEngine.initTools( vehicle, maxLooking, leftActive, widthOff
 	vehicle.aseTurnMode    = turnMode
 	vehicle.aseMaxLooking  = maxLooking
 	
---if not ( uTurn ) and vehicle.acTurnStage ~= nil and vehicle.acTurnStage == 0 then
---	vehicle.aseMaxRotation = math.pi
---else 
-	vehicle.aseMaxRotation = ASEGlobals.maxRotation 
---end 
+	if     vehicle.aseTurnMode == "C"
+			or vehicle.aseTurnMode == "L"
+			or vehicle.aseTurnMode == "K" then
+		vehicle.aseMaxRotation = ASEGlobals.maxRotationC
+	else 
+		vehicle.aseMaxRotation = ASEGlobals.maxRotationU
+	end 
 	
 	if collisionDist > 1 then
 		vehicle.aseCollision = collisionDist 
@@ -2865,6 +2897,7 @@ end
 function AutoSteeringEngine.invalidateField( vehicle )
 	--if not ( vehicle.aseFieldIsInvalid ) then print("invalidating field") end
 	vehicle.aseFieldIsInvalid = true
+	vehicle.aseLastBestAngle  = nil
 end
 
 ------------------------------------------------------------------------
@@ -3969,7 +4002,7 @@ function AutoSteeringEngine.initSteering( vehicle, savedMarker, uTurn )
 			else
 				local ax, ox, oi, wi
 				local left = vehicle.aseLRSwitch
-				if savedMarker and vehicle.aseTools[tp.i].savedAx ~= nil then
+				if vehicle.aseTools[tp.i].isPlough and savedMarker and vehicle.aseTools[tp.i].savedAx ~= nil then
 					if uTurn and AITractor.invertsMarkerOnTurn(vehicle, left) then
 						ax = -vehicle.aseTools[tp.i].savedOx
 						ox = -vehicle.aseTools[tp.i].savedAx					
@@ -4753,19 +4786,15 @@ function AutoSteeringEngine.getSpecialToolSettings( vehicle )
 		if tool.doubleJoint then
 			settings.noReverse = true
 		end
-		if tool.isPlough then
-			if tool.aiForceTurnNoBackward then
-				if not ( AutoTractor.acDevFeatures
-						 and tool.obj.rotationPart.turnAnimation
-						 and tool.obj.playAnimation ~= nil
-						 and tool.obj:getIsPloughRotationAllowed() ) then
-					settings.noReverse = true
-				end
+		if      tool.isPlough then
+			if      tool.aiForceTurnNoBackward 
+				  and not ( tool.ploughTransport ) then
+				settings.noReverse = true
 			end
-			--if     tool.obj.rotationPart               == nil
-			--		or tool.obj.rotationPart.turnAnimation == nil then
-			--	settings.rightOnly = true
-			--end
+			if     tool.obj.rotationPart               == nil
+					or tool.obj.rotationPart.turnAnimation == nil then
+				settings.rightOnly = true
+			end
 		end
 		if tool.isCombine then
 		--	if tool.xl+tool.xl+tool.xl < -tool.xr then
@@ -4878,6 +4907,18 @@ function AutoSteeringEngine.addTool( vehicle, object, reference )
 --	tool.b3 = -4
 	end
 	
+	tool.ploughTransport = false
+	if      tool.isPlough 
+			and tool.aiForceTurnNoBackward 
+			and tool.obj.rotationPart.turnAnimation ~= nil
+			and tool.obj.playAnimation              ~= nil then
+		if object.configFileName == "data/vehicles/tools/lemken/lemkenDiamant12.xml" then
+			tool.ploughTransport = true
+		else
+			tool.ploughTransport = ASEGlobals.ploughTransport > 0
+		end
+	end
+		
 	if      useAI 
 			and object.aiLeftMarker  ~= nil 
 			and object.aiRightMarker ~= nil 
@@ -5501,7 +5542,14 @@ function AutoSteeringEngine.checkIsAnimPlaying( vehicle, moveDown )
 				return true
       end
  		end
+		
 		if moveDown and tool.lowerStateOnFruits == nil then		
+			if      tool.isTurnOnVehicle
+					and tool.obj:getCanBeTurnedOn( )
+					and not tool.obj:getIsTurnedOn( ) then
+				tool.obj:setIsTurnedOn( true )
+			end
+			
 			local isReady = AutoSteeringEngine.checkToolIsReady( tool ) 
 			
 			if isReady == false then 
@@ -6075,7 +6123,7 @@ end
 -- setToolsAreLowered
 ------------------------------------------------------------------------
 function AutoSteeringEngine.setPloughTransport( vehicle, isTransport, excludePackomat )
-	if not ( AutoTractor.acDevFeatures and vehicle.aseChain ~= nil and vehicle.aseLRSwitch ~= nil and vehicle.aseToolCount ~= nil and vehicle.aseToolCount >= 1 ) then
+	if not ( vehicle.aseChain ~= nil and vehicle.aseLRSwitch ~= nil and vehicle.aseToolCount ~= nil and vehicle.aseToolCount >= 1 ) then
 		return
 	end
 	for i=1,vehicle.aseToolCount do
@@ -6086,10 +6134,7 @@ function AutoSteeringEngine.setPloughTransport( vehicle, isTransport, excludePac
 			if self.transport ~= isTransport then
 				self:setStateEvent("transport", isTransport )
 			end
-		elseif  vehicle.aseTools[i].isPlough 
-			  and vehicle.aseTools[i].aiForceTurnNoBackward 
-				and vehicle.aseTools[i].obj.rotationPart.turnAnimation
-				and vehicle.aseTools[i].obj.playAnimation ~= nil
+		elseif  vehicle.aseTools[i].ploughTransport
 				and vehicle.aseTools[i].obj:getIsPloughRotationAllowed() then
 			local self = vehicle.aseTools[i].obj
 			local curAnimTime = self:getAnimationTime(self.rotationPart.turnAnimation)
