@@ -4555,7 +4555,11 @@ function AutoSteeringEngine.getRelativeTranslation(root,node)
 		return 0,0,0
 	end
 	local x,y,z;
-	if getParent(node)==root then
+	local state,result = pcall( getParent, node )
+	if not ( state ) then
+		if AutoTractor.acDevFeatures then AutoTractor.printCallstack() end
+		return 0,0,0
+	elseif result==root then
 		x,y,z = getTranslation(node);
 	else
 		x,y,z = worldToLocal(root,getWorldTranslation(node));
