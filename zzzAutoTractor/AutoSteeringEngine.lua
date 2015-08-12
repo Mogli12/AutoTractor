@@ -80,6 +80,8 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.maxDtDist     = 0
 	ASEGlobals.showStat      = 0
 	ASEGlobals.ploughTransport = 0
+	ASEGlobals.maxSpeed      = 0
+	ASEGlobals.maxTurnCheck  = 0
 	
 	local file
 	file = ASECurrentModDir.."autoSteeringEngineConfig.xml"
@@ -3605,7 +3607,8 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 						vehicle.aseChain.nodes[i].hasBorder = true
 					else
 						local wMax = ASEGlobals.maxDetectWidth2
-						if      vehicle.aseChain.radius ~= nil
+						if      math.abs( wMax - ASEGlobals.maxDetectWidth ) < 0.1
+								and vehicle.aseChain.radius ~= nil
 								and not ( vehicle.aseTools[toolParam.i].aiForceTurnNoBackward )
 								and math.abs( toolParam.x ) < vehicle.aseChain.radius then
 							wMax = ASEGlobals.maxDetectWidth
@@ -3614,7 +3617,7 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 							local w = math.min( toolParam.width, wMax )
 							if AutoSteeringEngine.getFruitAreaForBorder( vehicle, xp, zp, xc, zc, -offsetOutside * w, toolParam.i )	> 0	then
 								d = true
-								vehicle.aseChain.nodes[i].hasBorder = true
+							--vehicle.aseChain.nodes[i].hasBorder = true
 							end
 						end
 					end
@@ -4341,8 +4344,8 @@ function AutoSteeringEngine.getTurnVector( vehicle, uTurn )
 			return 0,0
 		end
 		uTurn = vehicle.aseDirectionBeforeTurn.isUTurn
-	else
-		AutoSteeringEngine.initTurnVector( vehicle, uTurn )
+	--else
+	--	AutoSteeringEngine.initTurnVector( vehicle, uTurn )
 	end
 	
 	setRotation( vehicle.aseChain.headlandNode, 0, -AutoSteeringEngine.getTurnAngle( vehicle ), 0 );
@@ -4388,12 +4391,12 @@ function AutoSteeringEngine.initTurnVector( vehicle, uTurn )
 			or vehicle.aseDirectionBeforeTurn.x == nil
 			or vehicle.aseDirectionBeforeTurn.z == nil then
 		return
-	end;
-	
-	local isUTurn = false
-	if uTurn then
-		isUTurn = ( vehicle.acTurnStage ~= 0 )
 	end
+	
+	local isUTurn = uTurn --false
+--if uTurn then
+--	isUTurn = ( vehicle.acTurnStage ~= 0 )
+--end
 	if      vehicle.aseDirectionBeforeTurn.xOffset ~= nil 
 			and vehicle.aseDirectionBeforeTurn.isUTurn == isUTurn then
 		return
@@ -4417,7 +4420,7 @@ function AutoSteeringEngine.initTurnVector( vehicle, uTurn )
 	vehicle.aseDirectionBeforeTurn.xOffset = 0
 	vehicle.aseDirectionBeforeTurn.zOffset = 0
 		
-	if vehicle.aseTools ~= nil and vehicle.aseToolCount > 0 then	
+	if false and vehicle.aseTools ~= nil and vehicle.aseToolCount > 0 then	
 		local dxz, _,dzz  = localDirectionToWorld( vehicle.aseChain.headlandNode, 0, 0, 1 )
 		local dxx, _,dzx  = localDirectionToWorld( vehicle.aseChain.headlandNode, 1, 0, 0 )			
 		local xw0,zw0,xw1,zw1,xw2,zw2 
@@ -4425,7 +4428,7 @@ function AutoSteeringEngine.initTurnVector( vehicle, uTurn )
 		if uTurn then
 			dist  = ASEGlobals.ignoreDist + 3
 		end
-		dist    = Utils.clamp( AutoSteeringEngine.getTraceLength( vehicle ), dist, 20 )
+		dist    = Utils.clamp( AutoSteeringEngine.getTraceLength( vehicle ), dist, ASEGlobals.maxTurnCheck )
 		local f = 0
 
 		xw0 = vehicle.aseDirectionBeforeTurn.x

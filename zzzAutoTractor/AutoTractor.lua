@@ -2209,7 +2209,20 @@ function AutoTractor.writeStreamHelper(streamId, parameters)
 	end
 end
 
+local AutoTractorSetParametersdLog
 function AutoTractor:setParameters(parameters)
+
+	if self == nil then
+		if AutoTractorSetParametersdLog < 10 then
+			AutoTractorSetParametersdLog = AutoTractorSetParametersdLog + 1;
+			print("------------------------------------------------------------------------");
+			print("AutoTractor:setParameters: self == nil ("..tostring(self.isServer).."/"..tostring(self.isClient)..")");
+			AutoTractorHud.printCallstack();
+			print("------------------------------------------------------------------------");
+		end
+		return
+	end
+
 	local turnOffset = 0;
 	if self.acParameters ~= nil and self.acParameters.turnOffset ~= nil then
 		turnOffset = self.acParameters.turnOffset

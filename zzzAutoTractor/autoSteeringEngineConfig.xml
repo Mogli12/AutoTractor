@@ -31,8 +31,8 @@
     <chainAvg value="1" />
 		<chainBorder value="2" />
 		<chainStart value="1" />
-		<maxDetectWidth value="5" />
-		<maxDetectWidth2 value="5" />
+		<maxDetectWidth value="10" />
+		<maxDetectWidth2 value="10" />
 		<lookAhead value="0" />
 		<lookAheadFix value="1" />
 		<stepBack value="99" />
@@ -72,4 +72,6 @@
 		<maxDtSum value="65" /> <!-- 10 fps => 100 ms divide by 1.5 for statistics reason => dt=66.67 ms  -->
 		<maxDtDist type="float" value="0.03434844" /> <!-- 10 km/h => 2.78 m/s => 0.278 m @ 10 fps; divide by 1.5 and square-->
 		<ploughTransport type="bool" value="false" />
+		<maxSpeed type="float" value="15"/>
+		<maxTurnCheck type="float" value="6"/>		
 </ASEGlobals>
