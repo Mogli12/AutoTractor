@@ -146,6 +146,7 @@ function AutoTractorRegister:add()
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_MODE_C"]              = g_i18n:getText("AUTO_TRACTOR_TURN_MODE_C");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_MODE_L"]              = g_i18n:getText("AUTO_TRACTOR_TURN_MODE_L");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_MODE_K"]              = g_i18n:getText("AUTO_TRACTOR_TURN_MODE_K");
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_MODE_8"]              = g_i18n:getText("AUTO_TRACTOR_TURN_MODE_8");
 	
 end;
 

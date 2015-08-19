@@ -74,4 +74,7 @@
 		<ploughTransport type="bool" value="false" />
 		<maxSpeed type="float" value="15"/>
 		<maxTurnCheck type="float" value="6"/>		
+		<maxToolAngle type="degree" value="60" />
+		<maxToolAngle2 type="degree" value="30" />
+		<enableYUTurn type="bool" value="false" />
 </ASEGlobals>

@@ -40,14 +40,13 @@ end
 AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",     tp = "B", default = true, always = true },
 																			upNDown         = { xml = "acUTurn",       tp = "B", default = true, always = true },
 																			rightAreaActive = { xml = "acAreaRight",   tp = "B", default = false },
-																			noReverse       = { xml = "acNoReverse",   tp = "B", default = false },
 																			headland        = { xml = "acHeadland",    tp = "B", default = false },
 																			collision       = { xml = "acCollision",   tp = "B", default = false },
 																			inverted        = { xml = "acInverted",    tp = "B", default = false },
 																			frontPacker     = { xml = "acFrontPacker", tp = "B", default = false },
 																			isHired         = { xml = "acIsHired",     tp = "B", default = false },
 																			bigHeadland     = { xml = "acBigHeadland", tp = "B", default = true },
-																			bigTurn         = { xml = "acBigTurn",     tp = "I", default = 0 },
+																			turnModeIndex   = { xml = "acTurnMode",    tp = "I", default = 1 },
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
 																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.45 },
@@ -217,7 +216,7 @@ function AutoTractor:initMogliHud()
 	AutoTractorHud.addButton(self, "dds/noHeadland.dds",     "dds/headland.dds",     AutoTractor.setHeadland,   AutoTractor.evalHeadland,  1,2, "AUTO_TRACTOR_HEADLAND_ON", "AUTO_TRACTOR_HEADLAND_OFF" );
 	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setBigHeadland,nil,                       2,2, "AUTO_TRACTOR_HEADLAND", nil, AutoTractor.getBigHeadlandText, AutoTractor.getBigHeadlandImage );
 	AutoTractorHud.addButton(self, "dds/collision_off.dds",  "dds/collision_on.dds", AutoTractor.setCollision,  AutoTractor.evalCollision, 3,2, "AUTO_TRACTOR_COLLISION_OFF", "AUTO_TRACTOR_COLLISION_ON" );
-	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setBigTurn,    nil,                       4,2, nil, nil, AutoTractor.getBigTurnText, AutoTractor.getBigTurnImage );
+	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setTurnMode,   nil,                       4,2, nil, nil, AutoTractor.getTurnModeText, AutoTractor.getTurnModeImage );
 	AutoTractorHud.addButton(self, "dds/hire_off.dds",       "dds/hire_on.dds",      AutoTractor.setIsHired,    AutoTractor.evalIsHired,   5,2, "AUTO_TRACTOR_HIRE_OFF", "AUTO_TRACTOR_HIRE_ON");
 	
 	AutoTractorHud.addButton(self, "dds/inactive_left.dds",  "dds/active_left.dds",  AutoTractor.setAreaLeft,   AutoTractor.evalAreaLeft,  1,3, "AUTO_TRACTOR_ACTIVESIDERIGHT", "AUTO_TRACTOR_ACTIVESIDELEFT" );
@@ -454,17 +453,6 @@ function AutoTractor:onEnable(enabled)
 	end;
 end;
 
-function AutoTractor:evalNoReverse()
-	if not self.acParameters.enabled then 
-		return true 
-	end 
-	return not self.acParameters.noReverse;
-end;
-
-function AutoTractor:setNoReverse(enabled)
-	self.acParameters.noReverse = enabled;
-end;
-
 function AutoTractor:setWidthUp()
 	self.acParameters.widthOffset = self.acParameters.widthOffset + 0.125;
 end;
@@ -609,33 +597,22 @@ function AutoTractor:onAutoSteer(enabled)
 	end
 end
 
-function AutoTractor:setBigTurn()
-	local sut, rev = AutoSteeringEngine.getTurnMode( self )
-	if self.acParameters.noReverse then
-		self.acParameters.bigTurn   = 0
-		self.acParameters.noReverse = false	
-	else
-		local maxTurn = 0
-		if rev then
-			if self.acParameters.upNDown and sut then
-				maxTurn = 1 -- 2
-			else
-				maxTurn = 1
-			end
-		end
-		self.acParameters.bigTurn =  self.acParameters.bigTurn + 1
-		if self.acParameters.bigTurn > maxTurn then
-			self.acParameters.bigTurn   = 0
-			self.acParameters.noReverse = true
-		end		
+function AutoTractor:setTurnMode()
+	AutoTractor.checkAvailableTurnModes( self, true )
+	self.acParameters.turnModeIndex = self.acParameters.turnModeIndex + 1
+	if self.acParameters.turnModeIndex > table.getn( self.acTurnModes ) then
+		self.acParameters.turnModeIndex = 1
 	end
+	self.acTurnMode = self.acTurnModes[self.acParameters.turnModeIndex]
 end
 
-function AutoTractor:getBigTurnImage()
+function AutoTractor:getTurnModeImage()
 	local img = "empty.dds"
 	
 	if not ( self.acParameters.enabled ) then 
 		--img = "dds/bigUTurn.dds"
+	elseif self.acTurnMode == "8" then
+		img = "dds/bigUTurn8.dds"
 	elseif self.acTurnMode == "O" then
 		img = "dds/noRevUTurn.dds"
 	elseif self.acTurnMode == "A" then
@@ -662,7 +639,7 @@ function AutoTractor:getBigTurnImage()
 	return img
 end
 
-function AutoTractor:getBigTurnText(old)
+function AutoTractor:getTurnModeText(old)
 	if not self.acParameters.enabled then
 		return "" 
 	end 
@@ -1157,8 +1134,8 @@ function AutoTractor:newStartAITractor( superFunc, noEventSend, ... )
 		if not ( self.acSpeedFactorVerified ) then
 			self.acSpeedFactorVerified = true
 			local maxSpeed = AutoSteeringEngine.getToolsSpeedLimit( self )
-			if maxSpeed * self.acParameters.speedFactor > 10 then
-				self.acParameters.speedFactor = 10 / maxSpeed
+			if maxSpeed * self.acParameters.speedFactor > ASEGlobals.maxSpeed then
+				self.acParameters.speedFactor = ASEGlobals.maxSpeed / maxSpeed
 			end
 		end
 			
@@ -1410,6 +1387,68 @@ function AutoTractor:setStatus( newStatus, noEventSend )
 end
 
 ------------------------------------------------------------------------
+-- setStatus
+------------------------------------------------------------------------
+function AutoTractor:checkAvailableTurnModes( noEventSend )
+
+	if self.acDimensions == nil then
+		AutoTractor.calculateDimensions( self )
+	end
+
+	local sut, rev, revS, noHire = AutoSteeringEngine.getTurnMode( self )
+
+	if noHire then
+		self.acParameters.isHired = false
+	end
+
+	self.acTurnModes = {}
+	
+	if not ( self.acParameters.enabled ) then 
+		table.insert( self.acTurnModes, "T" )
+	elseif self.acParameters.upNDown then
+		if rev  then
+			if sut then
+			  table.insert( self.acTurnModes, "A" )
+			end
+			if      ASEGlobals.enableYUTurn     > 0
+					and self.acDimensions.distance ~= nil 
+					and self.acDimensions.radius   ~= nil 
+					and self.acDimensions.distance < self.acDimensions.radius + 1.5 then
+				table.insert( self.acTurnModes, "Y" )
+			end
+		end
+		if revS then
+			table.insert( self.acTurnModes, "T" )
+		end
+		table.insert( self.acTurnModes, "O" )
+		table.insert( self.acTurnModes, "8" )
+	else
+		if rev  then
+			table.insert( self.acTurnModes, "L"	)
+		end
+		if revS then
+			table.insert( self.acTurnModes, "K"	)
+		end
+		table.insert( self.acTurnModes, "C"	)
+	end
+	
+	if     self.acParameters.turnModeIndex == nil
+			or self.acParameters.turnModeIndex < 1 then
+		self.acParameters.turnModeIndex = 1
+		if noEventSend == nil or not noEventSend then
+			AutoTractor.sendParameters(self)
+		end
+	elseif self.acParameters.turnModeIndex > table.getn( self.acTurnModes ) then
+		self.acParameters.turnModeIndex = table.getn( self.acTurnModes )
+		if noEventSend == nil or not noEventSend then
+			AutoTractor.sendParameters(self)
+		end
+	end
+
+	self.acTurnMode = self.acTurnModes[self.acParameters.turnModeIndex]
+end
+
+------------------------------------------------------------------------
 -- checkState
 ------------------------------------------------------------------------
 function AutoTractor:checkState( onlyMaxLooking )
@@ -1420,9 +1459,6 @@ function AutoTractor:checkState( onlyMaxLooking )
 	
 	local s = AutoSteeringEngine.getSpecialToolSettings( self )
 	
-	if s.noReverse then
-		self.acParameters.noReverse = true
-	end
 	if s.rightOnly then
 		self.acParameters.upNDown         = false
 		self.acParameters.leftAreaActive  = true
@@ -1434,46 +1470,7 @@ function AutoTractor:checkState( onlyMaxLooking )
 		self.acParameters.rightAreaActive = true
 	end
 	
-	self.acTurnMode = "T"
-	local sut, rev, noHire = AutoSteeringEngine.getTurnMode( self )
-	
-	if noHire then
-		self.acParameters.isHired = false
-	end
-	
-	if not ( self.acParameters.enabled ) then 
-		self.acTurnMode = "T"
-	elseif self.acParameters.upNDown then
-	--if     self.acParameters.bigTurn > 1 then
-	--	sut = false
-	--elseif self.acParameters.bigTurn > 0 then
-		if self.acParameters.bigTurn > 0 then
-			rev = false
-		end
-		if self.acParameters.noReverse then
-			self.acTurnMode = "O"
-		elseif  rev and sut then
-			self.acTurnMode = "A"
-		elseif  rev 
-				and self.acDimensions.distance ~= nil 
-				and self.acDimensions.radius   ~= nil 
-				and self.acDimensions.distance < self.acDimensions.radius + 1.5 then
-			self.acTurnMode = "Y"
-		else
-			self.acTurnMode = "T"
-		end
-	else
-		if self.acParameters.bigTurn > 0 then
-			rev = false
-		end
-		if      self.acParameters.noReverse then
-			self.acTurnMode = "C"
-		elseif  rev then
-			self.acTurnMode = "L"
-		else
-			self.acTurnMode = "K"
-		end
-	end
+	AutoTractor.checkAvailableTurnModes( self )
 	
 	AutoTractor.calculateDistances( self )
 	
@@ -1502,7 +1499,7 @@ function AutoTractor:checkState( onlyMaxLooking )
 	--end
 	
 	if self.acParameters.enabled then 
-		AutoSteeringEngine.initTools( self, maxLooking, self.acParameters.leftAreaActive, self.acParameters.widthOffset, h, c, self.acTurnMode, self.acSavedMarker, self.uDuringUTurn );
+		AutoSteeringEngine.initTools( self, maxLooking, self.acParameters.leftAreaActive, self.acParameters.widthOffset, h, c, self.acTurnMode );
 	end
 end
 
@@ -1817,7 +1814,7 @@ function AutoTractor.calculateHeadland( turnMode, width, realWidth, zBack, toolD
 		ret   = math.max( ret, width ) 
 	elseif turnMode == "C" then
 		ret   = width + math.max( -zBack, 0 ) + radius
-	elseif turnMode == "O" then
+	elseif turnMode == "O" or turnMode == "8" then
 		local beta = math.acos( math.min(math.max(realWidth / radius, 0),1) )
 		local z    = 2.2 * radius * math.sin( beta )
 		if big then
@@ -2103,6 +2100,8 @@ function AutoTractor:setNextTurnStage(noEventSend)
 				if self.acParameters.upNDown then
 					if     self.acTurnMode == "O" then				
 						self.acTurnStage = 70				
+					elseif self.acTurnMode == "8" then				
+						self.acTurnStage = 80				
 					elseif self.acTurnMode == "A" then
 						self.acTurnStage = 50;
 					elseif self.acTurnMode == "Y" then
@@ -2118,6 +2117,7 @@ function AutoTractor:setNextTurnStage(noEventSend)
 						AutoSteeringEngine.setChainStraight( self ) 
 					end
 				elseif self.acTurnMode == "C" 
+						or self.acTurnMode == "8" 
 						or self.acTurnMode == "O" then
 			-- 90° turn w/o reverse
 					self.aiRescueTimer  = 3 * self.acDeltaTimeoutStop;

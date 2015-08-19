@@ -274,7 +274,12 @@
 			<de>Große 90° Wende</de>
 			<fr>Large virage 90°</fr>
 		</text>
-
+		<text name="AUTO_TRACTOR_TURN_MODE_8">
+			<en>U-turn without going back</en>
+			<de>180° Wende ohne Rückwärts</de>
+			<fr>Virage U sans marche arrière</fr>
+		</text>
+		
 		<text name="AUTO_TRACTOR_1">
 			<en>speed level 1</en>
 			<de>Geschwindigkeitsstufe 1</de>
