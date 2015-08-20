@@ -54,6 +54,32 @@ function FieldBitmapTile.getNewTile( iX, iZ, iStepLog2, iRelX, iRelZ, iInvert )
 end
 
 ------------------------------------------------------------------------
+-- clone
+------------------------------------------------------------------------
+function FieldBitmapTile.clone( template )
+
+	self = {};
+	
+	self.invert   = template.invert
+	self.sizeLog2 = template.sizeLog2 
+	self.sizeInt  = template.sizeInt  	
+	self.size     = template.size   
+	self.step     = template.step   
+	self.stepInv  = template.stepInv
+	self.startX   = template.startX 
+	self.startZ   = template.startZ 
+	self.endX     = template.endX   
+	self.endZ     = template.endZ   
+
+	self.bitmap   = {}
+	for i,b in pairs(template.bitmap) do
+		self.bitmap[i] = b
+	end
+	
+	return self
+end
+
+------------------------------------------------------------------------
 -- getIndex
 ------------------------------------------------------------------------
 function FieldBitmapTile:getIndex( x, z )
@@ -165,13 +191,28 @@ FieldBitmap = {}
 ------------------------------------------------------------------------
 -- create
 ------------------------------------------------------------------------
-function FieldBitmap.create( iStepLog2 )
+function FieldBitmap.create( iStepLog2, tiles )
 	local s = 5 - Utils.getNoNil( iStepLog2, 2 )
 
 	local self = { tiles    = {}, 
 								 stepLog2 = s, 
 								 factor1  = 2^s, 
 								 factor2  = 2^(-s) }
+								 
+	if type( tiles ) == "table" then
+		for i,t1 in pairs(tiles) do
+			self.tiles[i] = {}
+			for j,t2 in pairs(t1) do
+				self.tiles[i][j] = FieldBitmapTile.clone( t2 )
+			end
+		end	
+	end
+------------------------------------------------------------------------
+-- clone
+------------------------------------------------------------------------
+	local clone = function( )
+		return FieldBitmap.create( 5 - self.stepLog2, self.tiles )
+	end
 	
 ------------------------------------------------------------------------
 -- getTile
@@ -179,7 +220,7 @@ function FieldBitmap.create( iStepLog2 )
 	local getTile = function( x, z )
 		return math.floor( self.factor2 * x ), math.floor( self.factor2 * z )
 	end
-
+	
 ------------------------------------------------------------------------
 -- setBit
 ------------------------------------------------------------------------	
@@ -279,13 +320,154 @@ function FieldBitmap.create( iStepLog2 )
 		end
 		self.tiles[i][j] = FieldBitmapTile.getNewTile( self.factor1 * i, self.factor1 * j, 5 - self.stepLog2, nil, nil, true )
 	end
+	
+------------------------------------------------------------------------
+-- getPoint
+------------------------------------------------------------------------
+	local getPoint = function( iX, iZ )
+		f1 = 2^(self.stepLog2 - 5)
+		f2 = 2^(5 - self.stepLog2)
+		local x = f1 * math.floor( f2 * iX + 0.5 )
+		local z = f1 * math.floor( f2 * iZ + 0.5 )
+		return x, z
+	end
+	
+------------------------------------------------------------------------
+-- getAreaTotalCount
+------------------------------------------------------------------------
+	local getAreaTotalCount = function( startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ )
+		local area  = 0
+		local total = 0
+	
+		local minX = startWorldX
+		local maxX = startWorldX
+		local minZ = startWorldZ
+		local maxZ = startWorldZ
+		
+		minX = math.min( minX, widthWorldX )
+		maxX = math.max( maxX, widthWorldX )
+		minZ = math.min( minX, widthWorldZ )
+		maxZ = math.max( maxX, widthWorldZ )
+
+		minX = math.min( minX, heightWorldX )
+		maxX = math.max( maxX, heightWorldX )
+		minZ = math.min( minX, heightWorldZ )
+		maxZ = math.max( maxX, heightWorldZ )
+		
+		local x = widthWorldX + heightWorldX - startWorldX
+		local z = widthWorldZ + heightWorldZ - startWorldZ
+
+		minX = math.min( minX, x )
+		maxX = math.max( maxX, x )
+		minZ = math.min( minX, z )
+		maxZ = math.max( maxX, z )
+		
+		local minI, minJ = getTile( minX, minZ )
+		local maxI, maxJ = getTile( maxX, maxZ )
+		
+		
+		local stepInv = 2 ^ (self.stepLog2 - 5)
+
+		for curI=minI,maxI do
+			for curJ=minJ,maxJ do
+			
+				local t2
+				if self.tiles[curI] ~= nil then
+					t2 = self.tiles[curI][curJ]
+				else
+					t2 = nil
+				end
+				
+				local startX  = self.factor1 * curI
+				local startZ  = self.factor1 * curJ
+
+				for j=1,32 do
+					z = ( j-1 ) * stepInv + startZ
+					for i=0,31 do
+						x = i * stepInv + startX
+										
+						if FieldBitmap.checkPointInParallelogram( x, z, startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ ) then
+							total = total + 1
+							if t2 ~= nil and FieldBitmapTile.getBit( t2, x, z ) then
+								area = area + 1
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		return area, total 
+	end
+		
+------------------------------------------------------------------------
+-- cutArea
+------------------------------------------------------------------------
+	local cutArea = function( startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ )
+		local minX = startWorldX
+		local maxX = startWorldX
+		local minZ = startWorldZ
+		local maxZ = startWorldZ
+		
+		minX = math.min( minX, widthWorldX )
+		maxX = math.max( maxX, widthWorldX )
+		minZ = math.min( minX, widthWorldZ )
+		maxZ = math.max( maxX, widthWorldZ )
+
+		minX = math.min( minX, heightWorldX )
+		maxX = math.max( maxX, heightWorldX )
+		minZ = math.min( minX, heightWorldZ )
+		maxZ = math.max( maxX, heightWorldZ )
+		
+		local x = widthWorldX + heightWorldX - startWorldX
+		local z = widthWorldZ + heightWorldZ - startWorldZ
+
+		minX = math.min( minX, x )
+		maxX = math.max( maxX, x )
+		minZ = math.min( minX, z )
+		maxZ = math.max( maxX, z )
+		
+		local minI, minJ = getTile( minX, minZ )
+		local maxI, maxJ = getTile( maxX, maxZ )
+		
+		
+		local stepInv = 2 ^ (self.stepLog2 - 5)
+
+		for curI=minI,maxI do
+			for curJ=minJ,maxJ do
+				if self.tiles[curI] ~= nil and self.tiles[curI][curJ] ~= nil then
+					t2 = self.tiles[curI][curJ]
+				
+					local startX  = self.factor1 * curI
+					local startZ  = self.factor1 * curJ
+
+					for j=1,32 do
+						z = ( j-1 ) * stepInv + startZ
+						for i=0,31 do
+							x = i * stepInv + startX
+											
+							if FieldBitmap.checkPointInParallelogram( x, z, startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ ) then
+								FieldBitmapTile.setBit( t2, x, z, 0 )
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		return area, total 
+	end
 		
 	return { setBit            = setBit, 
 					 getBit            = getBit, 
 					 getPoints         = getPoints,
 					 tileExists        = tileExists, 
 					 getTileDimensions = getTileDimensions,
-					 createOneTile     = createOneTile }
+					 createOneTile     = createOneTile,
+					 getPoint          = getPoint,
+					 getAreaTotalCount = getAreaTotalCount,
+					 cutArea           = cutArea,
+					 clone             = clone }
 end
 
 ------------------------------------------------------------------------

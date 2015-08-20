@@ -2275,6 +2275,20 @@ function AutoSteeringEngine.drive( vehicle, dt, acceleration, allowedToDrive, mo
 		
 		WheelsUtil.updateWheelsPhysics(vehicle, dt, vehicle.lastSpeed, vehicle.acLastAcc, not allowedToDrive, vehicle.requiredDriveMode)
   end
+	
+	
+	if vehicle.aseCurrentWorkArea ~= nil and allowedToDrive and vehicle.acTurnStage <= 0 and vehicle.aseToolParams ~= nil then
+		for _,tp in pairs( vehicle.aseToolParams ) do
+			local lx1,_,lz1 = getWorldTranslation( tp.nodeLeft )
+			local lx2,_,lz2 = getWorldTranslation( tp.nodeRight )
+			
+			local dx, dz = localDirectionToWorld( vehicle.aseChain.refNode, 0, 0, - 1 )
+			local lx3 = lx1 + dx
+			local lz3 = lz1 + dz
+			
+			vehicle.aseCurrentWorkArea.cutArea( lx1,lz1,lx2,lz2,lx3,lz3 )
+		end
+	end
 end
 
 ------------------------------------------------------------------------
@@ -2615,6 +2629,15 @@ end
 ------------------------------------------------------------------------
 function AutoSteeringEngine.getFruitArea( vehicle, x1,z1,x2,z2,d,toolIndex,noMinLength )
 
+	--if AutoTractor.acDevFeatures and vehicle.aseCurrentField ~= nil then
+	--	if vehicle.aseCurrentWorkArea == nil then
+	--		vehicle.aseCurrentWorkArea = vehicle.aseCurrentField.clone()
+	--	end
+	--	
+	--	local lx1,lz1,lx2,lz2,lx3,lz3 = AutoSteeringEngine.getParallelogram( x1, z1, x2, z2, d, noMinLength );
+	--	return vehicle.aseCurrentWorkArea.getAreaTotalCount( lx1,lz1,lx2,lz2,lx3,lz3 )
+	--end
+	
   --if ASEGlobals.stepLog2 < 4 then
 	return AutoSteeringEngine.getFruitAreaNoBuffer( vehicle, x1,z1,x2,z2,d, vehicle.aseTools[toolIndex],noMinLength )
 	--else
@@ -3134,6 +3157,7 @@ function AutoSteeringEngine.checkField( vehicle, x, z )
 		vehicle.aseCurrentField   = nil		
 		vehicle.aseCurrentFieldCo = nil
 		vehicle.aseCurrentFieldCS = 'dead'
+		vehicle.aseCurrentWorkArea = nil
 	end
 	
 	if vehicle.aseCurrentField == nil then
@@ -4847,10 +4871,10 @@ function AutoSteeringEngine.getSpecialToolSettings( vehicle )
 	
 	for _,tool in pairs(vehicle.aseTools) do
 		if      tool.isPlough then
-			if     tool.obj.rotationPart               == nil
-					or tool.obj.rotationPart.turnAnimation == nil then
-				settings.rightOnly = true
-			end
+		--	if     tool.obj.rotationPart               == nil
+		--			or tool.obj.rotationPart.turnAnimation == nil then
+		--		settings.rightOnly = true
+		--	end
 		end
 		if tool.isCombine then
 		--	if tool.xl+tool.xl+tool.xl < -tool.xr then
