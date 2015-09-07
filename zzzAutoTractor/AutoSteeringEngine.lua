@@ -4055,7 +4055,7 @@ function AutoSteeringEngine.initSteering( vehicle )
 			end
 			local z = 0
 			if vehicle.aseTools[tp.i].isPlough then
-				z = math.min( tp.zReal, tp.zBack + 2 )
+				z = math.min( tp.zReal, tp.zBack ) - tp.z
 			end
 			if vehicle.aseBack == nil or vehicle.aseBack > z then
 				vehicle.aseBack = z
@@ -4354,9 +4354,9 @@ function AutoSteeringEngine.saveDirection( vehicle, cumulate, fruits )
 	vehicle.aseDirectionBeforeTurn.ux,_,vehicle.aseDirectionBeforeTurn.uz = localToWorld( vehicle.aseOtherI, vehicle.aseOffset + turnX, 0, vehicle.aseBack )
 	
 	if vehicle.aseActiveX < vehicle.aseOtherX then
-		turnX = vehicle.aseActiveX
+		turnX = vehicle.aseActiveX  + 1
 	else
-		turnX = -vehicle.aseActiveX
+		turnX = -vehicle.aseActiveX + 1
 	end
 	vehicle.aseDirectionBeforeTurn.cx,_,vehicle.aseDirectionBeforeTurn.cz = localToWorld( vehicle.aseOtherI, vehicle.aseOffset, 0, vehicle.aseBack + turnX )
 	
