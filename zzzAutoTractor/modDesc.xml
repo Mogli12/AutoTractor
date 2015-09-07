@@ -13,6 +13,8 @@
 			<![CDATA[Auto Traktor]]></de>
 		<fr>
 			<![CDATA[Auto Tractor - French traduction by Waylan]]></fr>
+		<it>
+			<![CDATA[Auto Tractor - Traduzione italiana by Cristiano Magro]]></it>
 	</description>
 	<iconFilename>dds/store.dds</iconFilename>
 	<multiplayer supported="true"/>
@@ -33,6 +35,7 @@
 			<en>AutoTractor v2.1 b2</en>
 			<de>AutoTractor v2.1 b2</de>
 			<fr>AutoTractor v2.1 b2</fr>
+			<it>AutoTractor v2.1 b2</it>
 		</text>
 	</l10n>
 </modDesc>
