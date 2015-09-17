@@ -313,6 +313,13 @@ function AutoTractor:delete()
 		AutoTractorHud.delete(self)
 	end
 	AutoSteeringEngine.deleteChain(self)
+
+	if self.atShiftedMarker ~= nil then
+		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do
+			AutoSteeringEngine.deleteNode( self.atShiftedMarker[marker] )
+		end
+		self.atShiftedMarker = nil
+	end
 end;
 
 ------------------------------------------------------------------------
@@ -802,8 +809,7 @@ function AutoTractor:update(dt)
 			and self.atMogliInitDone 
 			and self.atHud.GuiActive then	
 
-		if self.acParameters ~= nil and self.acParameters.enabled then
-			
+		if self.acParameters ~= nil and self.acParameters.enabled then			
 			if      ASEGlobals.showTrace > 0 
 					and self.acDimensions ~= nil
 					and ( self.isAITractorActivated or self.acTurnStage >= 98 ) then	
@@ -1018,20 +1024,10 @@ function AutoTractor:newGetIsHired( superFunc, ... )
 end
 
 function AutoTractor:newUpdateToolsInfo( superFunc, ... )
-	self.atShiftAiMarker = false
 	superFunc( self, ... )
 	
-	if     self.acParameters ~= nil and self.acParameters.enabled then 
+	if self.acParameters ~= nil and self.acParameters.enabled then 
 		AutoSteeringEngine.checkTools( self, true )
-	else--if self.acParameters ~= nil and self.acParameters.headland then 
-		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
-			if self[marker] ~= nil then
-				self.atShiftAiMarker = true
-				local node = createTransformGroup( "shifted_"..marker )
-				link( self[marker], node )
-				self[marker] = node 
-			end
-		end
 	end
 end
 
@@ -1286,29 +1282,61 @@ end
 -- AutoTractor.shiftAIMarker
 ------------------------------------------------------------------------
 function AutoTractor:shiftAIMarker()
-	if self.atShiftAiMarker then 
-		local h = 0
-		
-		if self.turnStage == 0 and ( self.acParameters ~= nil and self.acParameters.headland ) then 
-			if self.acDimensions == nil then
-				AutoTractor.calculateDimensions( self )
-			end
-			h = self.acDimensions.headlandDist 
-		end 
-		
-		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
-			setTranslation( self[marker], 0, 0, h )
-		end 		
+	
+	local h = 0
+	
+	if      self.isAITractorActivated 
+			and self.turnStage     == 0 
+			and self.acParameters ~= nil 
+			and self.acParameters.headland 
+			and not ( self.acParameters.enabled ) then 
+		if self.acDimensions == nil then
+			AutoTractor.calculateDimensions( self )
+		end
+		local d, t, z = AutoSteeringEngine.checkTools( self );
+		h = math.max( 0, math.max( 0, t-z ) + math.max( 0, -t-self.acDimensions.zOffset ) + AutoTractor.calculateHeadland( "T", d, z, t, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland ) + self.acParameters.turnOffset )
 	end 
+	
+	if math.abs( h ) < 0.01 and self.atShiftedMarker == nil then
+		return 
+	end
+
+	if self.atShiftedMarker == nil then
+	--print("creating shifted marker")
+		self.atLastMarkerShift = 0
+		self.atShiftedMarker   = {}
+		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do
+			self.atShiftedMarker[marker] = createTransformGroup( "shifted_"..marker )
+		end
+	end
+	
+	for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
+		if self[marker] == nil then
+		--print("unlink marker "..marker)
+			link( self.aiTractorDirectionNode, self.atShiftedMarker[marker] )
+		elseif self[marker] ~= self.atShiftedMarker[marker] then
+		--print("linking marker "..marker)
+			link( self[marker], self.atShiftedMarker[marker] )
+			self[marker] = self.atShiftedMarker[marker] 
+			setTranslation( self.atShiftedMarker[marker], 0, 0, h )
+		elseif math.abs( self.atLastMarkerShift - h ) > 0.01 then 
+		--print("shifting marker "..marker)
+			setTranslation( self.atShiftedMarker[marker], 0, 0, h )
+		end
+	end
+		
+	self.atLastMarkerShift = h
 end 
 
 ------------------------------------------------------------------------
 -- AutoTractor.resetAIMarker
 ------------------------------------------------------------------------
 function AutoTractor:resetAIMarker()
-	if self.atShiftAiMarker then 
+	if self.atShiftedMarker ~= nil then 
+	--print("resetting shifted marker")
+		self.atLastMarkerShift = 0
 		for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
-			setTranslation( self[marker], 0, 0, 0 )
+			setTranslation( self.atShiftedMarker[marker], 0, 0, 0 )
 		end 		
 	end 		
 end 
@@ -1807,8 +1835,16 @@ end
 ------------------------------------------------------------------------
 -- calculateHeadland
 ------------------------------------------------------------------------
-function AutoTractor.calculateHeadland( turnMode, width, realWidth, zBack, toolDist, radius, wheelBase, big )
+function AutoTractor.calculateHeadland( turnMode, realWidth, zBack, toolDist, radius, wheelBase, big )
 
+	local width = 1.5
+	if big then
+		if realWidth ~= nil and realWidth > width then
+			width = realWidth
+		end
+		width = width + 2
+	end
+	
 	local ret = 0
 	if     turnMode == "A"
 			or turnMode == "L" then
@@ -1881,18 +1917,10 @@ function AutoTractor.calculateDistances( self )
 		self.acDimensions.uTurnAngle     = 0;
 	end;
 
-	optimDist = 1.5
-	if self.acParameters.bigHeadland then
-		if self.acDimensions.distance ~= nil and self.acDimensions.distance > 1.5 then
-			optimDist = self.acDimensions.distance
-		end
-		optimDist = optimDist + 2
-	end
-	
 	self.acDimensions.insideDistance = math.max( 0, self.acDimensions.toolDistance - 1 - self.acDimensions.distance +(self.acDimensions.radius * math.cos( self.acDimensions.maxSteeringAngle )) );
 	self.acDimensions.uTurnDistance  = math.max( 0, 1 + self.acDimensions.toolDistance + self.acDimensions.distance - self.acDimensions.radius);	
-	self.acDimensions.headlandDist   = AutoTractor.calculateHeadland( self.acTurnMode, optimDist, self.acDimensions.distance, self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland )
-	self.acDimensions.collisionDist  = 1 + AutoTractor.calculateHeadland( self.acTurnMode, math.max( self.acDimensions.distance, optimDist ), self.acDimensions.distance, self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland )
+	self.acDimensions.headlandDist   = AutoTractor.calculateHeadland( self.acTurnMode, self.acDimensions.distance, self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland )
+	self.acDimensions.collisionDist  = 1 + AutoTractor.calculateHeadland( self.acTurnMode, math.max( self.acDimensions.distance, 1.5 ), self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland )
 	
 	--if self.acShowDistOnce == nil then
 	--	self.acShowDistOnce = 1

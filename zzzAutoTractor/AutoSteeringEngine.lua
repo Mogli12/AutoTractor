@@ -4802,7 +4802,7 @@ function AutoSteeringEngine.initChain( vehicle, iRefNode, zOffset, wheelBase, ma
 end
 
 function AutoSteeringEngine.deleteNode( index, noUnlink )
-	return pcall(AutoSteeringEngine.deleteNode1, index, withUnlink );
+	return pcall(AutoSteeringEngine.deleteNode1, index, noUnlink );
 end
 
 function AutoSteeringEngine.deleteNode1( index, noUnlink )
