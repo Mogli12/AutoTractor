@@ -805,6 +805,7 @@ function AutoTractor:update(dt)
 	
 	if      self.isEntered 
 			and self.isClient 
+			and self.isServer 
 			and self:getIsActive() 
 			and self.atMogliInitDone 
 			and self.atHud.GuiActive then	
