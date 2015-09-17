@@ -1290,6 +1290,9 @@ function AutoTractor:shiftAIMarker()
 		local h = 0
 		
 		if self.turnStage == 0 and ( self.acParameters ~= nil and self.acParameters.headland ) then 
+			if self.acDimensions == nil then
+				AutoTractor.calculateDimensions( self )
+			end
 			h = self.acDimensions.headlandDist 
 		end 
 		
