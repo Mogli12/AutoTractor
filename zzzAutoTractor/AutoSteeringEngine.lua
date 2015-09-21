@@ -4101,17 +4101,19 @@ function AutoSteeringEngine.initSteering( vehicle )
 		end
   end
 	
-	unlink( vehicle.aseChain.otherINode )
-	
-	if vehicle.aseOtherI == nil then
-		link( vehicle.aseChain.refNode, vehicle.aseChain.otherINode )
-		setRotation( vehicle.aseChain.otherINode, 0, 0, 0 )
-	else
-		link( vehicle.aseOtherI, vehicle.aseChain.otherINode )
+	if vehicle.aseChain.otherINode ~= nil then
+		unlink( vehicle.aseChain.otherINode )
+		
+		if vehicle.aseOtherI == nil then
+			link( vehicle.aseChain.refNode, vehicle.aseChain.otherINode )
+			setRotation( vehicle.aseChain.otherINode, 0, 0, 0 )
+		else
+			link( vehicle.aseOtherI, vehicle.aseChain.otherINode )
 
-		local zAngle = AutoSteeringEngine.getRelativeZRotation( vehicle.aseChain.refNode, vehicle.aseOtherI )
-		setRotation( vehicle.aseChain.otherINode, 0, 0, 0 -zAngle )
-		vehicle.aseOtherI = vehicle.aseChain.otherINode
+			local zAngle = AutoSteeringEngine.getRelativeZRotation( vehicle.aseChain.refNode, vehicle.aseOtherI )
+			setRotation( vehicle.aseChain.otherINode, 0, 0, 0 -zAngle )
+			vehicle.aseOtherI = vehicle.aseChain.otherINode
+		end
 	end
 	
 	vehicle.aseChain.nodes = vehicle.aseChain.nodesLow
