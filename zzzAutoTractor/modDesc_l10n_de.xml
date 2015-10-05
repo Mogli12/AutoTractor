@@ -10,6 +10,12 @@
 		<text name="AUTO_TRACTOR_WORKWIDTH"                text="Arbeitsbreite:" />
 		<text name="AUTO_TRACTOR_ACTIVESIDELEFT"           text="Aktive Seite: LINKS" />
 		<text name="AUTO_TRACTOR_ACTIVESIDERIGHT"          text="Aktive Seite: RECHTS" />		
+		
+		<text name="AUTO_TRACTOR_UTURN_ON_OFF"             text="AutoTractor-Modus wechseln"/>
+		<text name="AUTO_TRACTOR_STEERING"                 text="Manueller Lenkeingriff"/>
+		<text name="AUTO_TRACTOR_STEERING_ON"              text="Manueller Lenkeingriff [an]"/>
+		<text name="AUTO_TRACTOR_STEERING_OFF"             text="Manueller Lenkeingriff [aus]"/>
+		<text name="AUTO_TRACTOR_CONTINUE"                 text="Weiter fahren"/>
 
 		<text name="AUTO_TRACTOR_WAITMODE_ON"              text="Abtankmodus [stehend]" />	
 		<text name="AUTO_TRACTOR_WAITMODE_OFF"             text="Abtankmodus [fahrend]" />

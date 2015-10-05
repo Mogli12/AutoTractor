@@ -106,6 +106,9 @@ function AutoTractorRegister:add()
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_WORKWIDTH"]                = g_i18n:getText("AUTO_TRACTOR_WORKWIDTH");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_ACTIVESIDELEFT"]           = g_i18n:getText("AUTO_TRACTOR_ACTIVESIDELEFT");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_ACTIVESIDERIGHT"]          = g_i18n:getText("AUTO_TRACTOR_ACTIVESIDERIGHT");
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_STEERING_ON"]              = g_i18n:getText("AUTO_TRACTOR_STEERING_ON");
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_STEERING_OFF"]             = g_i18n:getText("AUTO_TRACTOR_STEERING_OFF");
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_CONTINUE"]                 = g_i18n:getText("AUTO_TRACTOR_CONTINUE");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_WAITMODE_ON"]              = g_i18n:getText("AUTO_TRACTOR_WAITMODE_ON");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_WAITMODE_OFF"]             = g_i18n:getText("AUTO_TRACTOR_WAITMODE_OFF");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_COLLISIONTRIGGERMODE_ON"]  = g_i18n:getText("AUTO_TRACTOR_COLLISIONTRIGGERMODE_ON");

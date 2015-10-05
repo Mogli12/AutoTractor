@@ -167,7 +167,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 	
 	local allowedToDrive =  AutoSteeringEngine.checkAllowedToDrive( self, not ( self.acParameters.isHired  ) )
 	
-	if self.acParameters.pause then
+	if self.acPause then
 		allowedToDrive = false
 		AutoTractor.setStatus( self, 0 )
 	end
@@ -261,9 +261,11 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 	if not allowedToDrive or speedLevel == 0 then
 		--print("not allowed to drive: "..tostring(allowedToDrive).." "..tostring(speedLevel));
 		AutoTractor.statEvent( self, "tS", dt )
+		self.isHirableBlocked = true		
 		AutoSteeringEngine.drive( self, dt, 0, false, true, 0 );
 		return
 	end
+	self.isHirableBlocked = false
 	
 	self.acLastSteeringAngle = nil
 	

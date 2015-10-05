@@ -50,7 +50,8 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
 																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.45 },
-																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 } };																															
+																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
+																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = {} --{ 0 }
 AutoTractor.turnStageEnd  = { { 4, -1 },
 															{ 8, -1 },
@@ -269,6 +270,17 @@ function AutoTractor:draw()
 		elseif self.acTurnStage >= 98 then
 			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_STEER_OFF"),InputBinding.AUTO_TRACTOR_STEER);
 		end	
+	elseif self.acLAltPressed then
+		if self.acParameters.upNDown then
+			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_UTURN_ON"), InputBinding.AUTO_TRACTOR_UTURN_ON_OFF)
+		else
+			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_UTURN_OFF"), InputBinding.AUTO_TRACTOR_UTURN_ON_OFF)
+		end
+		if self.acParameters.noSteering then
+			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_STEERING_OFF"), InputBinding.AUTO_TRACTOR_STEERING)
+		else
+			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_STEERING_ON"), InputBinding.AUTO_TRACTOR_STEERING)
+		end
 	else
 		if self.acParameters.rightAreaActive then
 			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_ACTIVESIDERIGHT"), InputBinding.AUTO_TRACTOR_SWAP_SIDE)
@@ -276,6 +288,11 @@ function AutoTractor:draw()
 			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_ACTIVESIDELEFT"), InputBinding.AUTO_TRACTOR_SWAP_SIDE)
 		end
 	end	
+	
+	if self.acPause then
+		g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_CONTINUE"), InputBinding.TOGGLE_CRUISE_CONTROL)
+	end
+	
 end;
 
 ------------------------------------------------------------------------
@@ -691,10 +708,11 @@ end
 ------------------------------------------------------------------------
 function AutoTractor:keyEvent(unicode, sym, modifier, isDown)
 	if self.isEntered and self.isClient then
-		if isDown and sym == Input.KEY_lctrl then
-			self.acLCtrlPressed = true
-		else
-			self.acLCtrlPressed = false
+		if sym == Input.KEY_lctrl then
+			self.acLCtrlPressed = isDown
+		end
+		if sym == Input.KEY_lalt then
+			self.acLAltPressed = isDown
 		end
 	end
 end
@@ -762,6 +780,12 @@ function AutoTractor:update(dt)
 			else
 				AutoTractor.onAutoSteer(self, false)
 			end
+		elseif AutoTractor.mbHasInputEvent( "AUTO_TRACTOR_UTURN_ON_OFF" ) then
+			self.acParameters.upNDown = not self.acParameters.upNDown
+			AutoTractor.sendParameters(self);
+		elseif AutoTractor.mbHasInputEvent( "AUTO_TRACTOR_STEERING" ) then
+			self.acParameters.noSteering = not self.acParameters.noSteering
+			AutoTractor.sendParameters(self);
 		elseif AutoTractor.mbHasInputEvent( "AUTO_TRACTOR_ENABLE" ) then
 			AutoTractor.onEnable( self, not self.acParameters.enabled )
 		elseif AutoTractor.mbHasInputEvent( "IMPLEMENT_EXTRA" ) then
@@ -862,19 +886,13 @@ function AutoTractor:updateTick( dt )
 		end
 	
 	
-		if self.isEntered and self.isClient and self:getIsActive() then
+		if self.isEntered and self.isClient and self:getIsActive() and not self.acParameters.noSteering then
 			self.acAxisSide = InputBinding.getDigitalInputAxis(InputBinding.AXIS_MOVE_SIDE_VEHICLE)
 			if InputBinding.isAxisZero(self.acAxisSide) then
 				self.acAxisSide = InputBinding.getAnalogInputAxis(InputBinding.AXIS_MOVE_SIDE_VEHICLE)
       end
-			
-		--local cc = InputBinding.getDigitalInputAxis(InputBinding.AXIS_CRUISE_CONTROL)
-		--if InputBinding.isAxisZero(self.acAxisSide) then
-		--	cc = InputBinding.getAnalogInputAxis(InputBinding.AXIS_CRUISE_CONTROL)
-		-- end
-		--if math.abs(cc) > 0.1 then
-		--	print(tostring(cc))
-		--end
+		else
+			self.acAxisSide = 0
     end
 
 		if      self.aiTractorDirectionNode ~= nil

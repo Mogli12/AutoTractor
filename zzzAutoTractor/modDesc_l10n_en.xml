@@ -11,6 +11,12 @@
 		<text name="AUTO_TRACTOR_ACTIVESIDELEFT" text="active side: LEFT" />
 		<text name="AUTO_TRACTOR_ACTIVESIDERIGHT" text="active side: RIGHT" />
 
+		<text name="AUTO_TRACTOR_UTURN_ON_OFF"             text="change AutoTractor mode"/>
+		<text name="AUTO_TRACTOR_STEERING"                 text="manual steering"/>
+		<text name="AUTO_TRACTOR_STEERING_ON"              text="manual steering [on]"/>
+		<text name="AUTO_TRACTOR_STEERING_OFF"             text="manual steering [off]"/>
+		<text name="AUTO_TRACTOR_CONTINUE"                 text="continue"/>
+		
 		<text name="AUTO_TRACTOR_WAITMODE_ON" text="unload mode [standing]" />
 		<text name="AUTO_TRACTOR_WAITMODE_OFF" text="unload mode [driving]" />
 		<text name="AUTO_TRACTOR_COLLISIONTRIGGERMODE_ON" text="distance keeper is ON" />
