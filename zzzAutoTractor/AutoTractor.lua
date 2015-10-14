@@ -886,7 +886,11 @@ function AutoTractor:updateTick( dt )
 		end
 	
 	
-		if self.isEntered and self.isClient and self:getIsActive() and not self.acParameters.noSteering then
+		if      self.isEntered 
+				and self.isClient 
+				and self:getIsActive() 
+				and not self.acParameters.noSteering
+				and ( self.isAITractorActivated or self.acTurnStage >= 98 ) then
 			self.acAxisSide = InputBinding.getDigitalInputAxis(InputBinding.AXIS_MOVE_SIDE_VEHICLE)
 			if InputBinding.isAxisZero(self.acAxisSide) then
 				self.acAxisSide = InputBinding.getAnalogInputAxis(InputBinding.AXIS_MOVE_SIDE_VEHICLE)
@@ -1007,7 +1011,7 @@ function AutoTractor:newUpdateTick( superFunc, dt )
 	-- do nothing
 		AutoTractor.resetAIMarker( self )
 	else
-		if self.acParameters ~= nil and not ( self.acParameters.isHired ) then 
+		if self.isAITractorActivated and self.acParameters ~= nil and not ( self.acParameters.isHired ) then 
 			if      self.capacity  ~= nil
 					and self.capacity  > 0 
 					and self.fillLevel ~= nil
