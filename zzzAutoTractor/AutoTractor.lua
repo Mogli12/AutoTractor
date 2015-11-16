@@ -535,6 +535,10 @@ function AutoTractor:setAngleDown(enabled)
 end
 
 function AutoTractor:getMaxLookingAngleValue( noScale )
+	if self.acDimensions == nil then
+		return ASEGlobals.maxLooking
+	end
+	
 	local ml = Utils.getNoNil( self.acDimensions.maxSteeringAngle, ASEGlobals.maxLooking )
 	
 	if      self.acParameters                  ~= nil
@@ -1207,7 +1211,7 @@ function AutoTractor:newStartAITractor( superFunc, noEventSend, ... )
 		self.acLastAcc       = 0;
 		self.acLastWantedSpeed = 0;
 		
-		AutoTractor.setInt32Value( self, "self.speed2Level", 2 )
+		AutoTractor.setInt32Value( self, "speed2Level", 2 )
 		
 		if AITractor.invertsMarkerOnTurn( self, self.acParameters.leftAreaActive ) then
 			if self.acParameters.leftAreaActive then
@@ -1436,14 +1440,14 @@ end
 ------------------------------------------------------------------------
 function AutoTractor:setStatus( newStatus, noEventSend )
 	
-	if self.atMogliInitDone and self.atHud ~= nil and ( self.atHud.Status == nil or self.atHud.Status ~= newStatus ) then
+	if self ~= nil and self.atMogliInitDone and self.atHud ~= nil and ( self.atHud.Status == nil or self.atHud.Status ~= newStatus ) then
 		AutoTractor.setInt32Value( self, "status", Utils.getNoNil( newStatus, 0 ) )
 	end
 	
 end
 
 ------------------------------------------------------------------------
--- setStatus
+-- checkAvailableTurnModes
 ------------------------------------------------------------------------
 function AutoTractor:checkAvailableTurnModes( noEventSend )
 
@@ -2272,7 +2276,7 @@ function AutoTractor:setParameters(parameters)
 		if AutoTractorSetParametersdLog < 10 then
 			AutoTractorSetParametersdLog = AutoTractorSetParametersdLog + 1;
 			print("------------------------------------------------------------------------");
-			print("AutoTractor:setParameters: self == nil ("..tostring(self.isServer).."/"..tostring(self.isClient)..")");
+			print("AutoTractor:setParameters: self == nil");
 			AutoTractorHud.printCallstack();
 			print("------------------------------------------------------------------------");
 		end

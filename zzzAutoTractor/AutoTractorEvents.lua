@@ -105,7 +105,7 @@ function AutoTractor:setInt32Value( name, value, noEventSend )
 		if AutoTractorSetInt32ValueLog < 10 then
 			AutoTractorSetInt32ValueLog = AutoTractorSetInt32ValueLog + 1;
 			print("------------------------------------------------------------------------");
-			print("AutoTractor:setInt32Value: self == nil ("..tostring(self.isServer).."/"..tostring(self.isClient).."/"..tostring(name).."/"..tostring(value)..")");
+			print("AutoTractor:setInt32Value: self == nil ( "..tostring(name).." / "..tostring(value).." )");
 			AutoTractorHud.printCallstack();
 			print("------------------------------------------------------------------------");
 		end
