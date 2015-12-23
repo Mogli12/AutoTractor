@@ -129,6 +129,19 @@ function AutoTractor:setInt32Value( name, value, noEventSend )
 		self.acTurnStageSent = value
 	elseif name == "speed2Level" then
 		self.speed2Level = value
+	elseif name == "moveDown" then
+		local moveDown, immediate
+		if value >= 2 then
+			moveDown = true
+		else
+			moveDown = false
+		end
+		if value == 1 or value == 3 then
+			immediate = true
+		else
+			immediate = false
+		end
+		
 	end
 end
 

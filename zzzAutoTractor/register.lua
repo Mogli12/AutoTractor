@@ -12,8 +12,103 @@ function AutoTractorRegister:loadMap(name)
   if not AutoTractorRegister.isLoaded then	
 		AutoTractorRegister:add();
     AutoTractorRegister.isLoaded = true;
+		if not g_currentMission.missionInfo.isTutorial then
+			g_careerScreen.saveSavegame = Utils.appendedFunction(g_careerScreen.saveSavegame, AutoTractorRegister.saveSavegame);
+		end
   end;	
 end;
+
+function AutoTractorRegister:saveSavegame( savegame )
+	local dir = g_currentMission.missionInfo.savegameDirectory	
+--	local bvm = createBitVectorMap("FieldOwnership")
+--
+--	loadBitVectorMapNew(bvm, 2048, 2048, 2, true)
+--	setBitVectorMapParallelogram(bvm, 70, 20, 30, 40, 50, 60, 0, 2, 1)
+--	setBitVectorMapParallelogram(bvm, 10, 20, 30, 40, 50, 60, 0, 1, 1)
+--	setBitVectorMapParallelogram(bvm, 10, 20, 30, 40, 50, 60, 1, 1, 1)
+--	
+--	saveBitVectorMapToFile(bvm, dir .. "/" .. "bvm.grle")
+end
+
+function AutoTractorRegister:loadSavegame()
+	local dir = g_currentMission.missionInfo.savegameDirectory	
+--	local bvm = createBitVectorMap("FieldOwnership")
+--
+--	local cb     = {}
+--	cb.fileFound = false
+--	cb.filename  = "bvm.grle"
+--	cb.getFilesCallback = function( self, filename )
+--		if filename == self.filename then
+--			self.fileFound = true
+--		end
+--	end
+--	
+--	getFiles(dir, "getFilesCallback", cb);	
+--	
+--	if cb.fileFound then
+--		loadBitVectorMapFromFile(bvm, dir .. "/" .. "bvm.grle")
+--		print("BVM loaded ")
+--
+--		local value
+--		value = getBitVectorMapNumChannels( bvm )
+--		print(tostring(value).." "..type(value))
+--		local w, h = getBitVectorMapSize( bvm )
+--		print(tostring(w).." "..tostring(h))
+--		value = getBitVectorMapParallelogram( bvm, 70, 20, 30, 40, 50, 60, 0, 2 )				
+--		print(tostring(value).." "..type(value))
+--		value = getBitVectorMapParallelogram( bvm, 10, 20, 30, 40, 50, 60, 0, 2 )				
+--		print(tostring(value).." "..type(value))
+--		value = getBitVectorMapParallelogram( bvm, 10, 20, 30, 40, 50, 60, 0, 1 )				
+--		print(tostring(value).." "..type(value))
+--		value = getBitVectorMapParallelogram( bvm, 10, 20, 30, 40, 50, 60, 1, 1 )				
+--		print(tostring(value).." "..type(value))
+--		value = getBitVectorMapPoint( bvm, 11, 21, 0, 2 )				
+--		print(tostring(value).." "..type(value))
+--		value = getBitVectorMapPoint( bvm, 11, 21, 0, 1 )				
+--		print(tostring(value).." "..type(value))
+--		value = getBitVectorMapPoint( bvm, 11, 21, 1, 1 )				
+--		print(tostring(value).." "..type(value))
+--		print("BVM loaded ")
+--	else
+--		print("BVM not loaded")
+--	end
+--
+--	local bvm2 = createBitVectorMap("FieldOwnership")
+--	loadBitVectorMapNew(bvm2, 2048, 2048, 1, true)
+--
+--	local x = 5
+--	local a,b,c = getBitVectorMapParallelogram( bvm2, x-1, 4, 2, 0, 0, 4, 0, 1 )				
+--		print(" 0 "..tostring(a).." "..tostring(b).." "..tostring(c))
+--		
+--		value = getBitVectorMapPoint( bvm2, x, 5, 0, 1 )				
+--		print(" A "..tostring(value))
+--
+--		setBitVectorMapParallelogram(bvm2, x, 5, 1, 0, 0, 1, 0, 1, 1)
+--		value = getBitVectorMapPoint( bvm2, x, 5, 0, 1 )				
+--		print(" A "..tostring(value))
+--		value = getBitVectorMapPoint( bvm2, x+1, 5, 0, 1 )				
+--		print(" A "..tostring(value))
+--		value = getBitVectorMapPoint( bvm2, x-1, 5, 0, 1 )				
+--		print(" A "..tostring(value))
+--		value = getBitVectorMapPoint( bvm2, x+2, 7, 0, 1 )				
+--		print(" A "..tostring(value))
+--		value = getBitVectorMapPoint( bvm2, x-1, 4, 0, 1 )				
+--		print(" A "..tostring(value))
+--		value = getBitVectorMapParallelogram( bvm2, x-1, 4, 2, 0, 0, 2, 0, 1 )				
+--		print(" B "..tostring(value))
+--
+--		setBitVectorMapParallelogram(bvm2, x-1, 7, 2, 0, 0, 2, 0, 1, 1)
+--		value = getBitVectorMapPoint( bvm2, x, 8, 0, 1 )				
+--		print(" C "..tostring(value))
+--		value = getBitVectorMapPoint( bvm2, x+1, 9, 0, 1 )				
+--		print(" C "..tostring(value))
+--		value = getBitVectorMapPoint( bvm2, x+2, 10, 0, 1 )				
+--		print(" C "..tostring(value))
+--		value = getBitVectorMapPoint( bvm2, x+3, 11, 0, 1 )				
+--		print(" C "..tostring(value))
+--		value = getBitVectorMapParallelogram( bvm2, x-1, 7, 2, 0, 0, 2, 0, 1 )				
+--		print(" D "..tostring(value))
+end
 
 function AutoTractorRegister:deleteMap()
   --AutoTractorRegister.isLoaded = false;
@@ -29,6 +124,12 @@ function AutoTractorRegister:keyEvent(unicode, sym, modifier, isDown)
 end;
 
 function AutoTractorRegister:update(dt)
+	if not g_currentMission.missionInfo.isTutorial and g_currentMission.missionInfo.isValid then
+		if not ( self.isSavegameLoaded ) then
+			AutoTractorRegister.loadSavegame( self )
+			self.isSavegameLoaded = true
+		end
+	end
 end;
 
 function AutoTractorRegister:draw()
@@ -150,6 +251,10 @@ function AutoTractorRegister:add()
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_MODE_L"]              = g_i18n:getText("AUTO_TRACTOR_TURN_MODE_L");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_MODE_K"]              = g_i18n:getText("AUTO_TRACTOR_TURN_MODE_K");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_MODE_8"]              = g_i18n:getText("AUTO_TRACTOR_TURN_MODE_8");
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_PAUSE_ON"]                 = g_i18n:getText("AUTO_TRACTOR_PAUSE_ON");    
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_PAUSE_OFF"]                = g_i18n:getText("AUTO_TRACTOR_PAUSE_OFF");  
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_STEER_RAISE"]              = g_i18n:getText("AUTO_TRACTOR_STEER_RAISE"); 
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_STEER_LOWER"]              = g_i18n:getText("AUTO_TRACTOR_STEER_LOWER"); 
 	
 end;
 

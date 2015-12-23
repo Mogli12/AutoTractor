@@ -195,7 +195,7 @@ function AutoTractor:initMogliHud()
 	end
 	
 	local mogliRows = 4
-	local mogliCols = 5
+	local mogliCols = 6
 	if AutoTractor.acDevFeatures then
 		mogliCols = mogliCols + 1
 	end
@@ -204,17 +204,17 @@ function AutoTractor:initMogliHud()
 	AutoTractorHud.setTitle( self, "AUTO_TRACTOR_VERSION" )
 	
 	if AutoTractor.acDevFeatures then
-		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test3, nil, 6,1, "Trace" );
-		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test1, nil, 6,2, "Turn Outside");
-		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test2, nil, 6,3, "Turn Inside" );
-		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test4, nil, 6,4, "Points" );
+		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test3, nil, mogliCols,1, "Trace" );
+		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test1, nil, mogliCols,2, "Turn Outside");
+		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test2, nil, mogliCols,3, "Turn Inside" );
+		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test4, nil, mogliCols,4, "Points" );
 	end
 
 	AutoTractorHud.addButton(self, "dds/off.dds",            "dds/on.dds",           AutoTractor.onStart,       AutoTractor.evalStart,     1,1, "HireEmployee", "DismissEmployee", nil, AutoTractor.getStartImage );
 	AutoTractorHud.addButton(self, "dds/ai_combine.dds",     "dds/auto_combine.dds", AutoTractor.onEnable,      AutoTractor.evalEnable,    2,1, "AUTO_TRACTOR_STOP", "AUTO_TRACTOR_START" );
 	AutoTractorHud.addButton(self, "dds/no_uturn2.dds",      "dds/uturn.dds",        AutoTractor.setUTurn,      AutoTractor.evalUTurn,     3,1, "AUTO_TRACTOR_UTURN_OFF", "AUTO_TRACTOR_UTURN_ON") ;
-	AutoTractorHud.addButton(self, "dds/auto_steer_off.dds", "dds/auto_steer_on.dds",AutoTractor.onAutoSteer,   AutoTractor.evalAutoSteer, 4,1, "AUTO_TRACTOR_STEER_ON", "AUTO_TRACTOR_STEER_OFF" );
-	AutoTractorHud.addButton(self, "dds/next.dds",           "dds/no_next.dds",      AutoTractor.nextTurnStage, AutoTractor.evalTurnStage, 5,1, "AUTO_TRACTOR_NEXTTURNSTAGE", nil );
+	AutoTractorHud.addButton(self, "dds/next.dds",           "dds/no_next.dds",      AutoTractor.nextTurnStage, AutoTractor.evalTurnStage, 4,1, "AUTO_TRACTOR_NEXTTURNSTAGE", nil );
+	AutoTractorHud.addButton(self, "dds/no_pause.dds",       "dds/pause.dds",        AutoTractor.setPause,      AutoTractor.evalPause,     5,1, "AUTO_TRACTOR_PAUSE_OFF", "AUTO_TRACTOR_PAUSE_ON", nil, AutoTractor.getPauseImage );
 	
 	AutoTractorHud.addButton(self, "dds/noHeadland.dds",     "dds/headland.dds",     AutoTractor.setHeadland,   AutoTractor.evalHeadland,  1,2, "AUTO_TRACTOR_HEADLAND_ON", "AUTO_TRACTOR_HEADLAND_OFF" );
 	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setBigHeadland,nil,                       2,2, "AUTO_TRACTOR_HEADLAND", nil, AutoTractor.getBigHeadlandText, AutoTractor.getBigHeadlandImage );
@@ -233,6 +233,11 @@ function AutoTractor:initMogliHud()
 	AutoTractorHud.addButton(self, "dds/forward.dds",        nil,                    AutoTractor.setForward,    nil,                       3,4, "AUTO_TRACTOR_TURN_OFFSET", nil, AutoTractor.getTurnOffset);
 	AutoTractorHud.addButton(self, "dds/backward.dds",       nil,                    AutoTractor.setBackward,   nil,                       4,4, "AUTO_TRACTOR_TURN_OFFSET", nil, AutoTractor.getTurnOffset);
 	AutoTractorHud.addButton(self, "dds/notInverted.dds",    "dds/inverted.dds",     AutoTractor.setInverted,   AutoTractor.evalInverted,  5,4, "AUTO_TRACTOR_INVERTED_OFF", "AUTO_TRACTOR_INVERTED_ON" );
+
+	AutoTractorHud.addButton(self, "dds/auto_steer_off.dds", "dds/auto_steer_on.dds",AutoTractor.onAutoSteer,   AutoTractor.evalAutoSteer, 6,1, "AUTO_TRACTOR_STEER_ON", "AUTO_TRACTOR_STEER_OFF" );
+	AutoTractorHud.addButton(self, "dds/raise_impl.dds",     "dds/lower_impl.dds",   AutoTractor.onRaiseImpl,   AutoTractor.evalRaiseImpl, 6,2, "AUTO_TRACTOR_STEER_LOWER", "AUTO_TRACTOR_STEER_RAISE", nil, AutoTractor.getRaiseImplImage );
+	AutoTractorHud.addButton(self, "empty.dds",              "dds/refresh.dds",      AutoTractor.onMagic,       AutoTractor.evalAutoSteer, 6,3, nil, nil );
+
 	
 	if type( self.atHud ) == "table" then
 		self.atMogliInitDone = true
@@ -557,9 +562,6 @@ end
 function AutoTractor:evalTurnStage()
 	if self.isAITractorActivated then
 		if self.acParameters.enabled then
-			if self.acTurnStage < 0 then
-				return false
-			end
 			for _,ts in pairs( AutoTractor.turnStageNoNext ) do
 				if self.acTurnStage == ts then
 					return false
@@ -584,22 +586,50 @@ function AutoTractor:evalPause()
 	if not self.acParameters.enabled then 
 		return true 
 	end 
-	return self.isAITractorActivated and self.acParameters.enabled and not self.acPause
+	if not self.isAITractorActivated then
+		return true
+	end
+	if not self.acPause then
+		return true
+	end
+	return false
 end
 
 function AutoTractor:setPause(enabled)
+	if not self.acParameters.enabled then 
+		return  
+	end 
+	if not self.isAITractorActivated then
+		return 
+	end
+	
 	self.acPause = enabled
-	--if self.acPause then
-	--	self:dismiss()
-	--else
-	--	self:hire()
-	--end
-
+	
+	if enabled then
+		AutoTractor.setInt32Value( self, "speed2Level", 0 )
+	else
+		AutoTractor.setInt32Value( self, "speed2Level", 2 )
+	end
+	
   if g_server ~= nil then
     g_server:broadcastEvent(AutoTractorPauseEvent:new(self,enabled), nil, nil, self)
   else
     g_client:getServerConnection():sendEvent(AutoTractorPauseEvent:new(self,enabled))
   end
+end
+
+
+function AutoTractor:getPauseImage()
+	if not self.acParameters.enabled then 
+		return "empty.dds"
+	end 
+	if not self.isAITractorActivated then
+		return "empty.dds"
+	end
+	if not self.acPause then
+		return "dds/no_pause.dds"
+	end
+	return "dds/pause.dds"
 end
 
 function AutoTractor:evalAutoSteer()
@@ -625,6 +655,48 @@ function AutoTractor:onAutoSteer(enabled)
     self.stopMotorOnLeave = true
     self.deactivateOnLeave = true
 	end
+end
+
+function AutoTractor:onMagic(enabled)
+	if not self.isAITractorActivated and self.acTurnStage >= 98 then
+		AutoTractor.initMogliHud(self)
+		AutoSteeringEngine.invalidateField( self )		
+		AITractor.updateToolsInfo(self);
+		AutoTractor.processImplementsOfImplement(self,self,true)	
+	end
+end
+
+function AutoTractor:onRaiseImpl(enabled)
+	if     self.isAITractorActivated 
+			or self.acParameters == nil
+			or not self.acParameters.enabled then
+	-- do nothing
+	else
+		AutoTractor.setAIImplementsMoveDown(self,enabled,true)
+		if self.acParameters ~= nil and not enabled and self.acParameters.upNDown then
+			self.acParameters.leftAreaActive  = not self.acParameters.leftAreaActive 
+			self.acParameters.rightAreaActive = not self.acParameters.rightAreaActive
+			AutoTractor.sendParameters( self )
+		end
+	end
+end
+
+function AutoTractor:evalRaiseImpl()
+	if self.acImplementsMoveDown then
+		return false
+	end
+	return true
+end
+
+function AutoTractor:getRaiseImplImage()
+	if     self.isAITractorActivated 
+			or self.acParameters == nil
+			or not self.acParameters.enabled then
+		return "empty.dds"
+	elseif self.acImplementsMoveDown then
+		return "dds/raise_impl.dds"
+	end
+	return "dds/lower_impl.dds"
 end
 
 function AutoTractor:setTurnMode()
@@ -794,18 +866,30 @@ function AutoTractor:update(dt)
 			AutoTractor.onEnable( self, not self.acParameters.enabled )
 		elseif AutoTractor.mbHasInputEvent( "IMPLEMENT_EXTRA" ) then
 			self.acCheckPloughSide = true
+		elseif AutoTractor.mbHasInputEvent( "AUTO_TRACTOR_RAISE" ) then
+			AutoTractor.onRaiseImpl( self, AutoTractor.evalRaiseImpl( self ) )
 		end
 		
 		if self.isAITractorActivated then
 			local cc = InputBinding.getDigitalInputAxis(InputBinding.AXIS_CRUISE_CONTROL)
+			local cd = false
 			if InputBinding.isAxisZero(cc) then
 				cc = InputBinding.getAnalogInputAxis(InputBinding.AXIS_CRUISE_CONTROL)
 				if InputBinding.isAxisZero(cc) then
 					cc = 0
+				else
+					self.acParameters.speedFactor = Utils.clamp( self.acParameters.speedFactor + 0.00025 * dt * cc, 0.1, 1.1 )
 				end
+			else
+				local maxSpeed = 3.6 * AutoSteeringEngine.getToolsSpeedLimit( self )
+				local cs = math.floor( 0.5 + self.acParameters.speedFactor * maxSpeed )
+				if     cc > 0 then
+					cs = cs + 1
+				elseif cc < 0 then
+					cs = cs - 1
+				end
+				self.acParameters.speedFactor = Utils.clamp( cs / maxSpeed, 0.1, 1.1 )
 			end
-			
-			self.acParameters.speedFactor = Utils.clamp( self.acParameters.speedFactor + 0.00025 * dt * cc, 0.1, 1.1 )
 			if self.acParameters ~= nil and self.acParameters.enabled and self.isAITractorActivated then
 				self:setCruiseControlMaxSpeed( self.acParameters.speedFactor * AutoSteeringEngine.getToolsSpeedLimit( self ) )
 			end
@@ -817,10 +901,8 @@ function AutoTractor:update(dt)
 			if AutoTractor.mbHasInputEvent( "TOGGLE_CRUISE_CONTROL" ) then
 				if self.speed2Level == nil or self.speed2Level > 0 then
 					AutoTractor.setPause( self, true )
-					AutoTractor.setInt32Value( self, "speed2Level", 0 )
 				else
 					AutoTractor.setPause( self, false )
-					AutoTractor.setInt32Value( self, "speed2Level", 2 )
 				end
 			end
 		end
@@ -1158,10 +1240,9 @@ function AutoTractor:newStartAITractor( superFunc, noEventSend, ... )
 		AutoTractor.initMogliHud(self)
 		if not ( self.acSpeedFactorVerified ) then
 			self.acSpeedFactorVerified = true
-			local maxSpeed = AutoSteeringEngine.getToolsSpeedLimit( self )
-			if maxSpeed * self.acParameters.speedFactor > ASEGlobals.maxSpeed then
-				self.acParameters.speedFactor = ASEGlobals.maxSpeed / maxSpeed
-			end
+			local maxSpeed = 3.6 * AutoSteeringEngine.getToolsSpeedLimit( self )
+			local cs = math.min( math.floor( 0.5 + maxSpeed * self.acParameters.speedFactor ), 3.6 * ASEGlobals.maxSpeed )
+			self.acParameters.speedFactor = cs / maxSpeed
 		end
 			
 		self.acDtSum           = 0
@@ -1237,7 +1318,7 @@ end
 ------------------------------------------------------------------------
 --local showOnce17 = true
 function AutoTractor:newStopAITractor( superFunc, noEventSend, ... )
-	if AutoTractor.acDevFeatures then AutoTractorHud.printCallstack() end
+--if AutoTractor.acDevFeatures then AutoTractorHud.printCallstack() end
 	
 	if self == nil or superFunc == nil or type(superFunc) ~= "function" then
 		--if showOnce17 == true then
@@ -1303,6 +1384,8 @@ function AutoTractor:newStopAITractor( superFunc, noEventSend, ... )
 	end
 
 	AutoTractor.resetAIMarker( self )
+	self.acImplementsMoveDown = false
+	
 end
 
 ------------------------------------------------------------------------
@@ -1421,16 +1504,23 @@ end;
 ------------------------------------------------------------------------
 -- AITractor:setAIImplementsMoveDown(moveDown)
 ------------------------------------------------------------------------
-function AutoTractor:setAIImplementsMoveDown( moveDown )
+function AutoTractor:setAIImplementsMoveDown( moveDown, immediate, noEventSend )
 
-	if self.isServer then
-		g_server:broadcastEvent(AISetImplementsMoveDownEvent:new(self, moveDown), nil, nil, self);
-	end;
-
+	if not ( noEventSend ) then
+		local value = 0
+		if moveDown then
+			value = value + 2
+		end
+		if immediate then
+			value = value + 1
+		end
+		AutoTractor.setInt32Value( self, "moveDown", value )
+	end
+	
 	if     self.acImplementsMoveDown == nil
 			or self.acImplementsMoveDown ~= moveDown then
 		self.acImplementsMoveDown = moveDown
-		AutoSteeringEngine.setToolsAreLowered( self, moveDown, false )
+		AutoSteeringEngine.setToolsAreLowered( self, moveDown, immediate )
 	end
 
 end
@@ -2152,7 +2242,7 @@ function AutoTractor:setNextTurnStage(noEventSend)
 
 	if AutoTractor.evalTurnStage(self) then
 		if self.acParameters.enabled then
-			if self.acTurnStage == 0 then
+			if self.acTurnStage <= 0 then
 			
 				self.acTurn2Outside = false
 				self.turnTimer = self.acDeltaTimeoutWait;

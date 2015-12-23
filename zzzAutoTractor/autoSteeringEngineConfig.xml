@@ -14,7 +14,8 @@
     <artAxisRot type="float" value="0.500000" />
     <artAxisShift type="float" value="-0.500000" />
     <average type="float" value="1" />
-    <angleStep type="degree" value="15" />
+    <!--angleStep type="degree" value="15" /-->
+    <angleStep type="degree" value="6" />
     <chainDivide value="7" />
     <chainDivide2 value="4" />
     <chainSplit value="0" />
@@ -68,7 +69,7 @@
 		<limitInside type="bool" value="true" />
 		<algorithm value="1" />
 		<!--fruitBufferSq type="float" value="0.04" /-->
-		<fruitBufferSq type="float" value="0.0001" />
+		<fruitBufferFactor type="float" value="20" />
 		<maxDtSum value="65" /> <!-- 10 fps => 100 ms divide by 1.5 for statistics reason => dt=66.67 ms  -->
 		<maxDtDist type="float" value="0.03434844" /> <!-- 10 km/h => 2.78 m/s => 0.278 m @ 10 fps; divide by 1.5 and square-->
 		<ploughTransport type="bool" value="false" />
@@ -77,4 +78,5 @@
 		<maxToolAngle type="degree" value="60" />
 		<maxToolAngle2 type="degree" value="30" />
 		<enableYUTurn type="bool" value="false" />
+		<aiRescueDistSq type="float" value="900" />
 </ASEGlobals>

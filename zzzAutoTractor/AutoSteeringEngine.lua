@@ -75,7 +75,7 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.algorithm    = 0
 	ASEGlobals.maxDetectWidth  = 0
 	ASEGlobals.maxDetectWidth2 = 0
-	ASEGlobals.fruitBufferSq = 0
+	ASEGlobals.fruitBufferFactor = 0
 	ASEGlobals.maxDtSum      = 0
 	ASEGlobals.maxDtDist     = 0
 	ASEGlobals.showStat      = 0
@@ -85,6 +85,7 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.maxToolAngle  = 0
 	ASEGlobals.maxToolAngle2 = 0
 	ASEGlobals.enableYUTurn  = 0
+	ASEGlobals.aiRescueDistSq= 0
 	
 	local file
 	file = ASECurrentModDir.."autoSteeringEngineConfig.xml"
@@ -99,6 +100,12 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 		AutoSteeringEngine.globalsLoad( file )	
 	elseif createIfMissing then
 		AutoSteeringEngine.globalsCreate()
+	end
+	
+	if ASEGlobals.fruitBufferFactor <= 0 then
+		ASEGlobals.fruitBufferFactorInv = 0
+	else
+		ASEGlobals.fruitBufferFactorInv = 1.0 / ASEGlobals.fruitBufferFactor
 	end
 	
 	print("AutoSteeringEngine initialized");
@@ -674,21 +681,6 @@ function AutoSteeringEngine.processChainNew( vehicle, smooth, withYield )
 	
 	AutoSteeringEngine.initSteering( vehicle )	
 	AutoSteeringEngine.syncRootNode( vehicle, true )
-
-	local x,_,z = AutoSteeringEngine.getAiWorldPosition( vehicle )
-	
-	if vehicle.aseFruitAreaBufferX == nil or vehicle.aseFruitAreaBufferZ == nil then
-		vehicle.aseFruitAreaBuffer  = nil
-		vehicle.aseFruitAreaBufferX = x
-		vehicle.aseFruitAreaBufferZ = z
-	else
-		local lsq = Utils.vector2LengthSq( vehicle.aseFruitAreaBufferX-x, vehicle.aseFruitAreaBufferZ-z )
-		if lsq > ASEGlobals.fruitBufferSq then
-			vehicle.aseFruitAreaBuffer  = nil
-			vehicle.aseFruitAreaBufferX = x
-			vehicle.aseFruitAreaBufferZ = z
-		end
-	end
 	
 	if s < 1 then
 		vehicle.aseSmooth      = s
@@ -766,21 +758,6 @@ function AutoSteeringEngine.processChainOld( vehicle, smooth, withYield )
 	AutoSteeringEngine.initSteering( vehicle )	
 	AutoSteeringEngine.syncRootNode( vehicle, true )
 
-	local x,_,z = AutoSteeringEngine.getAiWorldPosition( vehicle )
-	
-	if vehicle.aseFruitAreaBufferX == nil or vehicle.aseFruitAreaBufferZ == nil then
-		vehicle.aseFruitAreaBuffer  = nil
-		vehicle.aseFruitAreaBufferX = x
-		vehicle.aseFruitAreaBufferZ = z
-	else
-		local lsq = Utils.vector2LengthSq( vehicle.aseFruitAreaBufferX-x, vehicle.aseFruitAreaBufferZ-z )
-		if lsq > ASEGlobals.fruitBufferSq then
-			vehicle.aseFruitAreaBuffer  = nil
-			vehicle.aseFruitAreaBufferX = x
-			vehicle.aseFruitAreaBufferZ = z
-		end
-	end
-	
 	if s < 1 then
 		vehicle.aseSmooth      = s
 		vehicle.aseAngleFactor = vehicle.aseAngleFactor * vehicle.aseSmooth
@@ -1408,70 +1385,78 @@ function AutoSteeringEngine.initTools( vehicle, maxLooking, leftActive, widthOff
 		for i=1,vehicle.aseToolCount do
 		
 			local skip = false
-			for j=1,vehicle.aseToolCount do
-				if i ~= j then
-					if     ( vehicle.aseTools[i].isCombine 
-								or vehicle.aseTools[i].isPlough 
-								or vehicle.aseTools[i].isSprayer 
-								or vehicle.aseTools[i].isMower
-								or vehicle.aseTools[i].outTerrainDetailChannel >= 0
-								--or ( vehicle.aseTools[i].specialType ~= nil and vehicle.aseTools[i].specialType ~= "" ) 
-								 )
-							and vehicle.aseTools[i].isCombine   == vehicle.aseTools[j].isCombine  
-							and vehicle.aseTools[i].isPlough    == vehicle.aseTools[j].isPlough   
-							and vehicle.aseTools[i].isSprayer   == vehicle.aseTools[j].isSprayer  
-							and vehicle.aseTools[i].isMower     == vehicle.aseTools[j].isMower
-							and vehicle.aseTools[i].outTerrainDetailChannel == vehicle.aseTools[j].outTerrainDetailChannel 
-							--and vehicle.aseTools[i].specialType == vehicle.aseTools[j].specialType
-							then
-						
-						if x[j] == nil then	
-							local tool = vehicle.aseTools[j]
-							local xOffset,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.refNode );
-							for m=1,table.getn(tool.marker) do
-								local xxx,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.marker[m] );
-								xxx = xxx - xOffset;
-								if tool.invert then xxx = -xxx end
-								if x[j] == nil then
-									x[j] = xxx
-								elseif vehicle.aseLRSwitch then
-									if x[j] < xxx then x[j] = xxx end
-								else
-									if x[j] > xxx then x[j] = xxx end
+			if vehicle.aseTools[i].ignoreAI then
+				skip = true
+			else
+				for j=1,vehicle.aseToolCount do
+					if i ~= j then
+						if     ( vehicle.aseTools[i].isCombine 
+									or vehicle.aseTools[i].isPlough 
+									or vehicle.aseTools[i].isSprayer 
+									or vehicle.aseTools[i].isMower
+									or vehicle.aseTools[i].outTerrainDetailChannel >= 0
+									--or ( vehicle.aseTools[i].specialType ~= nil and vehicle.aseTools[i].specialType ~= "" ) 
+									 )
+								and vehicle.aseTools[i].isCombine   == vehicle.aseTools[j].isCombine  
+								and vehicle.aseTools[i].isPlough    == vehicle.aseTools[j].isPlough   
+								and vehicle.aseTools[i].isSprayer   == vehicle.aseTools[j].isSprayer  
+								and vehicle.aseTools[i].isMower     == vehicle.aseTools[j].isMower
+								and vehicle.aseTools[i].outTerrainDetailChannel == vehicle.aseTools[j].outTerrainDetailChannel 
+								--and vehicle.aseTools[i].specialType == vehicle.aseTools[j].specialType
+								then
+							
+							if x[j] == nil then	
+								local tool = vehicle.aseTools[j]
+								local xOffset,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.refNode );
+								for m=1,table.getn(tool.marker) do
+									local xxx,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.marker[m] );
+									xxx = xxx - xOffset;
+									if tool.invert then xxx = -xxx end
+									if x[j] == nil then
+										x[j] = xxx
+									elseif vehicle.aseLRSwitch then
+										if x[j] < xxx then x[j] = xxx end
+									else
+										if x[j] > xxx then x[j] = xxx end
+									end
 								end
+								local xxx = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.refNode, tool.refNode );
+								x[j]  = x[j] + xxx
 							end
-							local xxx = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.refNode, tool.refNode );
-							x[j]  = x[j] + xxx
-						end
-						
-						if x[i] == nil then
-							tool = vehicle.aseTools[i]
-							xOffset,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.refNode );
-							for m=1,table.getn(tool.marker) do
-								local xxx,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.marker[m] );
-								xxx = xxx - xOffset;
-								if tool.invert then xxx = -xxx end
-								if x[i] == nil then
-									x[i] = xxx
-								elseif vehicle.aseLRSwitch then
-									if x[i] < xxx then x[i] = xxx end
-								else
-									if x[i] > xxx then x[i] = xxx end
+							
+							if x[i] == nil then
+								tool = vehicle.aseTools[i]
+								xOffset,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.refNode );
+								for m=1,table.getn(tool.marker) do
+									local xxx,_,_ = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.marker[m] );
+									xxx = xxx - xOffset;
+									if tool.invert then xxx = -xxx end
+									if x[i] == nil then
+										x[i] = xxx
+									elseif vehicle.aseLRSwitch then
+										if x[i] < xxx then x[i] = xxx end
+									else
+										if x[i] > xxx then x[i] = xxx end
+									end
 								end
+								xxx = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.refNode, tool.refNode );
+								x[i]  = x[i] + xxx
 							end
-							xxx = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.refNode, tool.refNode );
-							x[i]  = x[i] + xxx
+							
+							if vehicle.aseLRSwitch then
+								skip = skip or ( x[i] + 0.2 < x[j] )
+							else
+								skip = skip or ( x[i] - 0.2 > x[j] )
+							end
+							
+							if skip then
+								break
+							end
+							
+							--if skip then
+							--	print("x[i]: "..tostring(x[i]).." x[j]: "..tostring(x[j]).." "..tostring(vehicle.aseLRSwitch))
+							--end
 						end
-						
-						if vehicle.aseLRSwitch then
-							skip = ( x[i] + 0.2 < x[j] )
-						else
-							skip = ( x[i] - 0.2 > x[j] )
-						end
-						
-						--if skip then
-						--	print("x[i]: "..tostring(x[i]).." x[j]: "..tostring(x[j]).." "..tostring(vehicle.aseLRSwitch))
-						--end
 					end
 				end
 			end
@@ -2007,14 +1992,9 @@ function AutoSteeringEngine.getTurnMode( vehicle )
 --			smallUTurn = false
 --		end
 			
-			if vehicle.aseTools[i].doubleJoint then
+			if vehicle.aseTools[i].noRevStraight then
 				revStraight= false
 			end
-			if      vehicle.aseTools[i].isPlough 
-					and vehicle.aseTools[i].aiForceTurnNoBackward 
-					and not ( vehicle.aseTools[i].ploughTransport ) then
-				revStraight= false
-			end			
 			if      vehicle.aseTools[i].aiForceTurnNoBackward 
 					and vehicle.aseTools[i].steeringAxleNode ~= nil then
 				revUTurn   = false
@@ -2625,23 +2605,100 @@ function AutoSteeringEngine.displayDebugInfo( vehicle )
 end
 
 ------------------------------------------------------------------------
+-- checkFruitAreaBuffer
+------------------------------------------------------------------------
+function AutoSteeringEngine.checkFruitAreaBuffer( vehicle )
+
+	if ASEGlobals.fruitBufferFactor <= 0 then
+		vehicle.aseFruitAreaBuffer  = nil
+	else
+		local x,_,z = AutoSteeringEngine.getAiWorldPosition( vehicle )
+		
+		if vehicle.aseFruitAreaBufferX == nil or vehicle.aseFruitAreaBufferZ == nil then
+			vehicle.aseFruitAreaBuffer  = nil
+			vehicle.aseFruitAreaBufferX = x
+			vehicle.aseFruitAreaBufferZ = z
+		else
+			local lsq = Utils.vector2LengthSq( vehicle.aseFruitAreaBufferX-x, vehicle.aseFruitAreaBufferZ-z )
+			if lsq * ASEGlobals.fruitBufferFactor * ASEGlobals.fruitBufferFactor > 0.5 then
+				vehicle.aseFruitAreaBuffer  = nil
+				vehicle.aseFruitAreaBufferX = x
+				vehicle.aseFruitAreaBufferZ = z
+			end
+		end
+	end
+end
+
+------------------------------------------------------------------------
+-- getFruitAreaForBorder
+------------------------------------------------------------------------
+function AutoSteeringEngine.getFruitAreaForBorder( vehicle, x1,z1,x2,z2,d,toolIndex )
+	return AutoSteeringEngine.getFruitArea( vehicle, x1,z1,x2,z2,d,toolIndex )
+end
+------------------------------------------------------------------------
 -- getFruitArea
 ------------------------------------------------------------------------
 function AutoSteeringEngine.getFruitArea( vehicle, x1,z1,x2,z2,d,toolIndex,noMinLength )
 
-	--if AutoTractor.acDevFeatures and vehicle.aseCurrentField ~= nil then
-	--	if vehicle.aseCurrentWorkArea == nil then
-	--		vehicle.aseCurrentWorkArea = vehicle.aseCurrentField.clone()
-	--	end
-	--	
-	--	local lx1,lz1,lx2,lz2,lx3,lz3 = AutoSteeringEngine.getParallelogram( x1, z1, x2, z2, d, noMinLength );
-	--	return vehicle.aseCurrentWorkArea.getAreaTotalCount( lx1,lz1,lx2,lz2,lx3,lz3 )
-	--end
+	if ASEGlobals.fruitBufferFactor <= 0 then
+		return AutoSteeringEngine.getFruitAreaForTool( vehicle, x1,z1,x2,z2,d,toolIndex,noMinLength )
+	end
 	
-  --if ASEGlobals.stepLog2 < 4 then
+	AutoSteeringEngine.checkFruitAreaBuffer( vehicle )
+	
+	local border, total
+	local nml = false
+	if noMinLength then
+		nml = true
+	end
+	
+	local x1i = math.floor( ASEGlobals.fruitBufferFactor * x1 + 0.5 )
+	local z1i = math.floor( ASEGlobals.fruitBufferFactor * z1 + 0.5 )
+	local x2i = math.floor( ASEGlobals.fruitBufferFactor * x2 + 0.5 )
+	local z2i = math.floor( ASEGlobals.fruitBufferFactor * z2 + 0.5 )
+	
+	if vehicle.aseFruitAreaBuffer == nil then 
+		vehicle.aseFruitAreaBuffer = {} 
+	end 
+	if vehicle.aseFruitAreaBuffer[x1i] == nil then 
+		vehicle.aseFruitAreaBuffer[x1i] = {} 
+	end 
+	if vehicle.aseFruitAreaBuffer[x1i][z1i] == nil then 
+		vehicle.aseFruitAreaBuffer[x1i][z1i] = {} 
+	end 
+	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i] == nil then 
+		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i] = {} 
+	end 
+	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i] == nil then 
+		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i] = {} 
+	end 
+	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d] == nil then 
+		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d] = {} 
+	end 
+	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex] == nil then 
+		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex] = {} 
+	end 
+	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex][nml] == nil then 
+		border, total = AutoSteeringEngine.getFruitAreaForTool( vehicle, ASEGlobals.fruitBufferFactorInv * x1i,
+																																		 ASEGlobals.fruitBufferFactorInv * z1i,
+																																		 ASEGlobals.fruitBufferFactorInv * x2i,
+																																		 ASEGlobals.fruitBufferFactorInv * z2i,
+																																		 d,toolIndex,nml )
+		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex][nml] = { b = border, t = total } 
+	else 
+		border = vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex][nml].b 
+		total  = vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex][nml].t 
+	end 
+	
+	return border, total 
+end 
+
+------------------------------------------------------------------------
+-- getFruitAreaForTool
+------------------------------------------------------------------------
+function AutoSteeringEngine.getFruitAreaForTool( vehicle, x1,z1,x2,z2,d,toolIndex,noMinLength )
+
 	return AutoSteeringEngine.getFruitAreaNoBuffer( vehicle, x1,z1,x2,z2,d, vehicle.aseTools[toolIndex],noMinLength )
-	--else
-	--end 
 	
 end
 
@@ -3556,52 +3613,6 @@ function AutoSteeringEngine.getChainPoint( vehicle, i, tp )
 	return vehicle.aseChain.nodes[i].tool[tp.i].x, vehicle.aseChain.nodes[i].tool[tp.i].z;
 	
 end
-
-------------------------------------------------------------------------
--- getFruitAreaForBorder
-------------------------------------------------------------------------
-function AutoSteeringEngine.getFruitAreaForBorder( vehicle, x1,z1,x2,z2,d,toolIndex )
-
-	if ASEGlobals.fruitBufferSq <= 0 then
-		return AutoSteeringEngine.getFruitArea( vehicle, x1,z1,x2,z2,d,toolIndex )
-	end
-	
-	local border, total
-	
-	local x1i = math.floor( 100 * x1 + 0.5 )
-	local z1i = math.floor( 100 * z1 + 0.5 )
-	local x2i = math.floor( 100 * x2 + 0.5 )
-	local z2i = math.floor( 100 * z2 + 0.5 )
-	
-	if vehicle.aseFruitAreaBuffer == nil then 
-		vehicle.aseFruitAreaBuffer = {} 
-	end 
-	if vehicle.aseFruitAreaBuffer[x1i] == nil then 
-		vehicle.aseFruitAreaBuffer[x1i] = {} 
-	end 
-	if vehicle.aseFruitAreaBuffer[x1i][z1i] == nil then 
-		vehicle.aseFruitAreaBuffer[x1i][z1i] = {} 
-	end 
-	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i] == nil then 
-		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i] = {} 
-	end 
-	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i] == nil then 
-		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i] = {} 
-	end 
-	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d] == nil then 
-		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d] = {} 
-	end 
-	if vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex] == nil then 
-		border, total = AutoSteeringEngine.getFruitArea( vehicle, 0.01*x1i,0.01*z1i,0.01*x2i,0.01*z2i,d,toolIndex )
-		vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex] = { b = border, t = total } 
-	else 
-		border = vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex].b 
-		total  = vehicle.aseFruitAreaBuffer[x1i][z1i][x2i][z2i][d][toolIndex].t 
-	end 
-
-	
-	return border, total 
-end 
 
 ------------------------------------------------------------------------
 -- getChainBorder
@@ -4562,6 +4573,21 @@ function AutoSteeringEngine.getTurnDistance( vehicle )
 end
 
 ------------------------------------------------------------------------
+-- getTurnDistance
+------------------------------------------------------------------------
+function AutoSteeringEngine.getTurnDistanceSq( vehicle )
+	if     vehicle.aseChain.refNode             == nil
+			or vehicle.aseDirectionBeforeTurn       == nil
+			or vehicle.aseDirectionBeforeTurn.trace == nil 
+			or vehicle.aseDirectionBeforeTurn.traceIndex < 1 then
+		return 0
+	end;
+	local _,y,_ = AutoSteeringEngine.getAiWorldPosition( vehicle );
+	local x,_,z = worldToLocal( vehicle.aseChain.refNode, vehicle.aseDirectionBeforeTurn.trace[vehicle.aseDirectionBeforeTurn.traceIndex].px, y, vehicle.aseDirectionBeforeTurn.trace[vehicle.aseDirectionBeforeTurn.traceIndex].pz )
+	return x*x + z*z
+end
+
+------------------------------------------------------------------------
 -- getTraceLength
 ------------------------------------------------------------------------
 function AutoSteeringEngine.getTraceLength( vehicle )
@@ -4954,6 +4980,7 @@ function AutoSteeringEngine.addTool( vehicle, object, reference )
 	tool.outTerrainDetailChannel       = -1;	
 	tool.useAIMarker                   = false;
 	tool.doubleJoint                   = false;
+	tool.noRevStraight                 = false
 	
 	if tool.checkZRotation then
 		tool.aiForceTurnNoBackward = true
@@ -5278,6 +5305,34 @@ elseif not ( AutoTractor.acDevFeatures ) then
 	
 	tool.refNode = reference;		
 	tool.marker  = marker;
+	
+	if     tool.doubleJoint 
+			or ( tool.isPlough 
+			 and tool.aiForceTurnNoBackward 
+			 and not ( tool.ploughTransport ) ) then
+		tool.noRevStraight = true
+	end
+	
+  --------------------------------------------------------
+	-- Vaederstad_SoilMod_Pack
+	if object.customEnvironment ~= nil and object.typeName == object.customEnvironment..".RapidA" then
+		tool.doubleJoint = true
+	end
+	
+	if object.customEnvironment ~= nil and object.typeName == object.customEnvironment..".vaederstadTopDown" then
+		tool.noRevStraight = false
+	end
+	
+	-- BioDrill or BioSpray attached to cultivator or seeding machine
+	if      object.customEnvironment                 ~= nil
+			and object.attacherVehicle                   ~= nil 
+			and object.attacherVehicle.customEnvironment ~= nil
+			and object.attacherVehicle.customEnvironment == object.customEnvironment
+			and ( object.typeName == object.customEnvironment..".vaederstadBioSpray1120"
+				 or object.typeName == object.customEnvironment..".vaederstadBioDrill1120" ) then
+		tool.ignoreAI = true
+	end
+  --------------------------------------------------------
 	
 	if tool.checkZRotation and tool.steeringAxleNode ~= nil then
 		local node = createTransformGroup( "rotSteeringAxleNode" )
