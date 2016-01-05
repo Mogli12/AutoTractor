@@ -729,6 +729,8 @@ function AutoTractor:getTurnModeImage()
 		img = "dds/smallSide.dds"
 	elseif self.acTurnMode == "K" then
 		img = "dds/bigSide.dds"
+	elseif self.acTurnMode == "7" then
+		img = "dds/bigSide7.dds"
 	end
 
 	if AutoTractor.acDevFeatures then
@@ -926,7 +928,9 @@ function AutoTractor:update(dt)
 					and ( self.isAITractorActivated or self.acTurnStage >= 98 ) then	
 				AutoSteeringEngine.drawLines( self );
 			else
-				AutoTractor.checkState( self )
+				if not ( self.isAITractorActivated or self.acTurnStage >= 98 ) then	
+					AutoTractor.checkState( self )
+				end
 				AutoSteeringEngine.drawMarker( self );
 			end
 		elseif ASEGlobals.showTrace > 0 then		
@@ -1577,6 +1581,7 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 			table.insert( self.acTurnModes, "L"	)
 		end
 		if revS then
+			table.insert( self.acTurnModes, "7"	)
 			table.insert( self.acTurnModes, "K"	)
 		end
 		table.insert( self.acTurnModes, "C"	)

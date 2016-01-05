@@ -16,6 +16,7 @@
     <average type="float" value="1" />
     <!--angleStep type="degree" value="15" /-->
     <angleStep type="degree" value="6" />
+    <angleFactorNoFix type="float" value="2.5" />
     <chainDivide value="7" />
     <chainDivide2 value="4" />
     <chainSplit value="0" />
