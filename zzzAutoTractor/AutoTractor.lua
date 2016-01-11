@@ -52,10 +52,10 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.45 },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
-AutoTractor.turnStageNoNext = {} --{ 0 }
+AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
 AutoTractor.turnStageEnd  = { { 4, -1 },
 															{ 8, -1 },
-															{ 23, 25 },
+														--{ 23, 25 },
 															{ 25, 27 },
 															{ 27, -2 },
 															{ 28, -2 },
@@ -1582,7 +1582,7 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 		end
 		if revS then
 			table.insert( self.acTurnModes, "7"	)
-			table.insert( self.acTurnModes, "K"	)
+		--table.insert( self.acTurnModes, "K"	)
 		end
 		table.insert( self.acTurnModes, "C"	)
 	end
@@ -2283,6 +2283,10 @@ function AutoTractor:setNextTurnStage(noEventSend)
 						or self.acTurnMode == "Y" then
 			-- 90° turn with reverse
 					self.acTurnStage = 1;
+				elseif self.acTurnMode == "7" then 
+			-- 90° new turn with reverse
+					self.acTurnStage = 90;
+					self.turnTimer = self.acDeltaTimeoutWait;
 				else
 			-- 90° turn with reverse
 					self.acTurnStage = 30;

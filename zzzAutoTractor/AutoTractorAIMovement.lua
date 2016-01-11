@@ -522,7 +522,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		local x,z, allowedToDrive = AutoTractor.getTurnVector( self, false );
 		angle = -math.min( math.max( math.rad( turnAngle ), -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle )
 
-		if     self.acTurn2Outside and ( x*x+z*z > 100 or noReverseIndex > 0 ) then
+		if 1 == 2 then --    self.acTurn2Outside and ( x*x+z*z > 100 or noReverseIndex > 0 ) then
 			self.acTurnStage = self.acTurnStage + 2;
 			self.turnTimer = self.acDeltaTimeoutNoTurn
 		elseif z < math.max( self.acDimensions.radius, ASEGlobals.minRadius ) + stoppingDist then
@@ -571,10 +571,11 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			angle = self.acDimensions.maxSteeringAngle
 		end
 
-		if noReverseIndex > 0 and self.acTurn2Outside then			
-			local toolAngle = AutoSteeringEngine.getToolAngle( self );			
-			angle  = nil;
-			angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+		if noReverseIndex > 0 and self.acTurn2Outside and angle ~= nil then			
+		--local toolAngle = AutoSteeringEngine.getToolAngle( self );			
+		--angle  = nil;
+		--angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+			angle = AutoTractor.getStraighBackwardsAngle( self, turnAngle - Utils.clamp( math.deg( angle ), -5, 5 ) )
 		end
 						
 --==============================================================				
@@ -612,19 +613,24 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			dist2 = 10 
 		end
 		
-		if noReverseIndex > 0 and self.acTurn2Outside then			
-			local toolAngle = AutoSteeringEngine.getToolAngle( self );			
-			angle  = nil;
-			angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+		if noReverseIndex > 0 and self.acTurn2Outside and angle ~= nil then			
+		--local toolAngle = AutoSteeringEngine.getToolAngle( self );			
+		--angle  = nil;
+		--angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+			angle = AutoTractor.getStraighBackwardsAngle( self, turnAngle - Utils.clamp( math.deg( angle ), -5, 5 ) )
 		end
 						
 		if     ( detected and dist2 > 9 )
 				or self.turnTimer < 0
-				or x*x + z*z      > 100 then
+				or x*x + z*z      > 400 then
 			if not detected then
 				angle = 0
 				if AutoTractor.acDevFeatures then
-					print("time out: "..tostring(self.acDeltaTimeoutNoTurn))
+					if self.turnTimer < 0  then
+						print("time out: "..tostring(self.acDeltaTimeoutNoTurn))
+					elseif x*x + z*z > 400 then
+						print("too far: 400m")
+					end
 				end
 			end
 				
@@ -723,7 +729,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 				
 		turn75 = AutoSteeringEngine.getMaxSteeringAngle75( self )
 		
-		if turnAngle < -135 or turnAngle + 90 + 0.3 * toolAngle < angleOffset then
+		if -turnAngle > 90 + ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle or turnAngle + 90 + 0.2 * toolAngle < angleOffset then
 		--if turnAngle < angleOffset - 90 - math.deg(turn75.gammaE) then
 			AutoSteeringEngine.setPloughTransport( self, true, true )
 			
@@ -739,11 +745,15 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		if not self.acParameters.leftAreaActive then
 			toolAngle = -toolAngle;
 		end;
-		toolAngle = math.deg( toolAngle )
+		--toolAngle = math.deg( toolAngle )
 
-		angle = turnAngle + 90 + 0.3 * toolAngle
+		--angle = turnAngle + 90 + 0.3 * toolAngle
+		--
+		--if math.abs( turnAngle + 90 ) < 9 and math.abs( angle ) < 3 then
 		
-		if math.abs( turnAngle + 90 ) < 9 and math.abs( angle ) < 3 then
+		angle = Utils.clamp( math.rad( turnAngle + 90 ), AutoTractor.getMaxAngleWithTool( self, true ), AutoTractor.getMaxAngleWithTool( self, false ) )
+		if      math.abs( turnAngle + 90 ) < angleOffset 
+				and math.abs( toolAngle ) < ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle then
 			angle = 0
 			
 			if self.acTurn2Outside then
@@ -782,19 +792,18 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 				self.acTurnStage   = self.acTurnStage + 1;					
 				self.turnTimer     = self.acDeltaTimeoutRun;
 			end
-		else
-			angle = math.rad( angle )
 		end
 
 --==============================================================				
 -- wait		
 	elseif self.acTurnStage == 24 then
 		allowedToDrive = false;						
-		moveForwards = false;					
-		angle  = nil;
-		local toolAngle = AutoSteeringEngine.getToolAngle( self );
-		angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
-		
+		moveForwards = false;				
+		local target = -90
+		if self.acTurn2Outside then
+			target = -target
+		end
+		angle  = AutoTractor.getStraighBackwardsAngle( self, target )
 		if self.turnTimer < 0 then
 			self.acTurnStage   = self.acTurnStage + 1;					
 			self.turnTimer     = self.acDeltaTimeoutStop;
@@ -804,15 +813,22 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 -- move backwards (straight)		
 	elseif self.acTurnStage == 25 then		
 		moveForwards = false;					
-		angle  = nil;
-		local toolAngle = AutoSteeringEngine.getToolAngle( self );
-		angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+		local target = -90
+		if noReverseIndex > 0 then
+			target = -87
+		end
+		if self.acTurn2Outside then
+			target = -target
+		end
+		angle  = AutoTractor.getStraighBackwardsAngle( self, target )
 		
 		local x,z, allowedToDrive = AutoTractor.getTurnVector( self, true );
 		if self.acParameters.leftAreaActive then x = -x end
 		
 		if self.acTurn2Outside then x = -x end
-		x = x - 2 - self.acDimensions.radius - math.max( 0.2 * self.acDimensions.radius, 1 )
+	--x = x - 2 - self.acDimensions.radius - math.max( 0.2 * self.acDimensions.radius, 1 )
+		local turn75 = AutoSteeringEngine.getMaxSteeringAngle75( self )
+		x = x - 2 - turn75.radius
 
 		if allowedToDrive and ( x > -stoppingDist or z < 0 ) then
 			if noReverseIndex > 0 then
@@ -850,22 +866,11 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		local test= Utils.getNoNil( self.aseDistance , 0 )
 --*********************************************************************************				
 		
-		--if z >= test then
-		--	if fruitsDetected then
-		--		AutoTractor.setAIImplementsMoveDown(self,true);
-		--	end
-		--elseif not detected or not fruitsDetected then
-		--	AutoTractor.setAIImplementsMoveDown(self,false);
-		--end
-		
-		detected  = false
-		local nav = true
-	--if ( fruitsDetected or z < test ) and math.abs( turnAngle ) >= 180-math.deg( angleMax ) then  --135 then
-	--if math.abs( turnAngle ) >= 180-math.deg( angleMax ) then
+		detected = false
 		if     fruitsDetected
-				or ( math.abs( turnAngle ) >= 170 
+				or math.abs( turnAngle )   >= 180 - angleOffset
+				or ( math.abs( turnAngle ) >= 180 - math.deg( self.acDimensions.maxLookingAngle ) 
 				 and math.abs( AutoSteeringEngine.getToolAngle( self ) ) <= ASEGlobals.maxToolAngle2 ) then
-			nav = false
 			detected, angle2, border = AutoTractor.detectAngle( self )
 		end		
 		
@@ -873,26 +878,62 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			print(string.format("T27: x: %0.3fm z: %0.3fm test: %0.3fm fd: %s det: %s ta: %0.1f°", x, z, test, tostring(fruitsDetected), tostring(detected), turnAngle ) )
 		end
 		
-	--if detected and fruitsDetected then
-	--	self.acTurnStage   = -22 --self.acTurnStage + 1;					
 		if detected then
-			self.acTurnStage   = -2
-			self.turnTimer     = self.acDeltaTimeoutNoTurn;
-			AutoTractor.setAIImplementsMoveDown(self,true);
-		elseif detected then
-			self.turnTimer     = self.acDeltaTimeoutNoTurn;
-		elseif nav or z < math.min( 0, test ) - 5 then
-			self.turnTimer     = self.acDeltaTimeoutNoTurn;
-			angle  = nil
-			angle2 = AutoTractor.navigateToSavePoint( self, true )
+			if fruitsDetected or math.abs( turnAngle ) >= 180 - angleOffset then
+				self.acTurnStage = -2
+				self.turnTimer   = self.acDeltaTimeoutNoTurn;
+				AutoTractor.setAIImplementsMoveDown(self,true);
+			end
+		elseif fruitsDetected then
+			self.acTurnStage = self.acTurnStage + 1
+			self.turnTimer   = self.acDeltaTimeoutNoTurn
+		else
+			self.turnTimer   = self.acDeltaTimeoutNoTurn;
+			angle            = nil
+		--local turn75     = AutoSteeringEngine.getMaxSteeringAngle75( self );
+			local onTrack    = false
+		--angle2, onTrack  = AutoSteeringEngine.navigateToSavePoint( self, true, nil, turn75 )
+			angle2, onTrack  = AutoSteeringEngine.navigateToSavePoint( self, true )
+			if not onTrack then
+				self.acTurnStage = self.acTurnStage + 1
+				self.turnTimer   = self.acDeltaTimeoutNoTurn
+			end
 		end
 		
 --==============================================================				
--- wait after U-turn
+-- forward and reduce tool angle
 	elseif self.acTurnStage == 28 then
-		allowedToDrive   = false;						
-		angle            = 0;		
-		self.acTurnStage = -22 -- -2;					
+
+		local newTurnAngle = 0
+		if turnAngle > 0 then
+			newTurnAngle = turnAngle - 180
+		else
+			newTurnAngle = turnAngle + 180
+		end
+		
+		angle = Utils.clamp( math.rad( newTurnAngle ), AutoTractor.getMaxAngleWithTool( self, true ), AutoTractor.getMaxAngleWithTool( self, false ) )
+
+		if      math.abs( newTurnAngle ) < angleOffset
+				and math.abs( AutoTractor.getToolAngle( self ) ) < ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle then
+			self.acTurnStage = self.acTurnStage + 1;					
+			self.turnTimer   = self.acDeltaTimeoutRun;
+			angle            = 0
+		end
+	
+--==============================================================				
+-- forward and reduce tool angle
+	elseif self.acTurnStage == 29 then
+
+		moveForwards = false
+		angle        = AutoTractor.getStraighBackwardsAngle( self, 180 )
+		if not fruitsDetected then
+			detected = AutoTractor.detectAngle( self )
+			if detected then
+				self.acTurnStage   = -2
+				self.turnTimer     = self.acDeltaTimeoutNoTurn;
+				AutoTractor.setAIImplementsMoveDown(self,true);
+			end
+		end
 	
 --==============================================================				
 --==============================================================				
@@ -988,9 +1029,10 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 -- move backwards (straight)		
 	elseif self.acTurnStage == 36 then		
 		moveForwards = false;					
-		angle  = nil;
-		local toolAngle = AutoSteeringEngine.getToolAngle( self );
-		angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+	--angle  = nil;
+	--local toolAngle = AutoSteeringEngine.getToolAngle( self );
+	--angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+		angle  = AutoTractor.getStraighBackwardsAngle( self, 50 )
 		
 		local _,z, allowedToDrive = AutoTractor.getTurnVector( self );
 		
@@ -1016,7 +1058,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		local x, allowedToDrive = AutoTractor.getTurnVector( self );
 		if self.acParameters.leftAreaActive then x = -x end
 		
-		if turnAngle < 70 then
+		if turnAngle < 90 - math.deg( self.acDimensions.maxLookingAngle ) then
 			angle = -self.acDimensions.maxSteeringAngle;
 		elseif fruitsDetected or detected or math.abs( turnAngle ) > 90 or x < 0 then
 			self.acTurnStage = -1;					
@@ -1174,7 +1216,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		elseif not detected then					
 			self.turnTimer     = self.acDeltaTimeoutNoTurn;
 			angle  = nil
-			angle2 = AutoTractor.navigateToSavePoint( self, true )
+			angle2 = AutoTractor.navigateToSavePoint( self )
 		else
 			AutoTractor.setAIImplementsMoveDown(self,true);
 		end
@@ -1372,7 +1414,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		elseif not detected then					
 			self.turnTimer     = self.acDeltaTimeoutNoTurn;
 			angle  = nil
-			angle2 = AutoTractor.navigateToSavePoint( self, true )
+			angle2 = AutoTractor.navigateToSavePoint( self )
 		else
 			AutoTractor.setAIImplementsMoveDown(self,true);
 		end
@@ -1596,7 +1638,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 				self.turnTimer     = self.acDeltaTimeoutNoTurn;
 				AutoTractor.setAIImplementsMoveDown(self,true);
 			elseif not detected then					
-				angle2 = AutoTractor.navigateToSavePoint( self, true )
+				angle2 = AutoTractor.navigateToSavePoint( self )
 			else
 				AutoTractor.setAIImplementsMoveDown(self,true);
 			end
@@ -1713,7 +1755,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		elseif nav or z < math.min( 0, test ) - 5 then
 			self.turnTimer     = self.acDeltaTimeoutNoTurn;
 			angle  = nil
-			angle2 = AutoTractor.navigateToSavePoint( self, true )
+			angle2 = AutoTractor.navigateToSavePoint( self )
 		end
 			
 --==============================================================				
@@ -1744,10 +1786,11 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 -- move backwards (straight)		
 	elseif self.acTurnStage == 92 then		
 		moveForwards = false;					
-		angle  = nil;
-		local toolAngle = AutoSteeringEngine.getToolAngle( self );
-		angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
-		
+		--angle  = nil;
+		--local toolAngle = AutoSteeringEngine.getToolAngle( self );
+		--angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+		angle  = AutoTractor.getStraighBackwardsAngle( self, 0 )
+
 		local _,z, allowedToDrive = AutoTractor.getTurnVector( self );
 		
 		if z < -self.acDimensions.radius then				
@@ -1763,31 +1806,22 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		local onTrack 
 		local turn75 = AutoSteeringEngine.getMaxSteeringAngle75( self );
 
-		angle2, onTrack = AutoSteeringEngine.navigateToSavePoint( self, false, nil, 0, turn75.radius - turn75.radiusT )		
-		local toolAngle = math.deg( AutoTractor.getToolAngle( self ) )
+		angle2, onTrack = AutoSteeringEngine.navigateToSavePoint( self, false, nil, turn75 )		
 		
-		if turnAngle > 90 + math.min( 15, - 0.5 * math.min( toolAngle, 0 ) ) then
-			if math.abs( toolAngle ) < 3 then
+	--if      turnAngle > 90 - angleOffset then
+	--		if math.abs( toolAngle ) < 3 then
+		if      turnAngle > 90 - angleOffset then
+			if math.abs( AutoTractor.getToolAngle( self ) ) < ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle then
 				self.acTurnStage = self.acTurnStage + 3
 				self.turnTimer   = self.acDeltaTimeoutRun;
 			else
-				self.acTurnStage = self.acTurnStage + 2
+				self.acTurnStage = self.acTurnStage + 1
 				self.turnTimer   = self.acDeltaTimeoutRun;
 			end
-			
-			if onTrack then
-				angle  = nil
-			else
-				angle  = math.rad( turnAngle - 90 )
-				angle2 = nil
-			end
-		elseif onTrack then
+		elseif  onTrack then
 			angle  = nil
-		elseif turnAngle >= 90 + angleOffset then
-			angle  = AutoTractor.getMaxAngleWithTool( self, false )
-			angle2 = nil
 		else
-			angle  = AutoTractor.getMaxAngleWithTool( self, true )
+			angle  = Utils.clamp( math.rad( turnAngle - 90 ), AutoTractor.getMaxAngleWithTool( self, true ), AutoTractor.getMaxAngleWithTool( self, false ) )
 			angle2 = nil
 		end
 		
@@ -1795,11 +1829,19 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 -- reduce tool angle I
 	elseif self.acTurnStage == 94 then
 		
-		angle = Utils.clamp( math.rad( turnAngle - 90 - angleOffset ) - AutoTractor.getLimitedToolAngle( self ), -0.5*self.acDimensions.maxSteeringAngle, 0.5*self.acDimensions.maxSteeringAngle )
-		allowedToDrive = false
+		local turn75 = AutoSteeringEngine.getMaxSteeringAngle75( self );
+		local x,z, allowedToDrive = AutoTractor.getTurnVector( self );
+		if self.acParameters.leftAreaActive then x = -x end
 		
-		if self.turnTimer < 0 then
-			self.acTurnStage = self.acTurnStage + 1;					
+		angle = -turn75.alpha
+		
+		if AutoTractor.acDevFeatures then
+			local newTurnAngle = turnAngle - 90 + math.deg( math.atan2( z, x ) )
+			print("T94: "..radToString( angle ).." "..degToString( turnAngle ).." "..degToString( newTurnAngle ).." "..tostring(x).." / "..tostring(z).." "..radToString( math.atan2( z, x )))
+		end
+
+		if z+z < turn75.radius - turn75.radiusT or turnAngle > 90 + ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle then
+			self.acTurnStage = self.acTurnStage + 1				
 			self.turnTimer   = self.acDeltaTimeoutStop;
 		end
 		
@@ -1807,14 +1849,20 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 -- reduce tool angle II
 	elseif self.acTurnStage == 95 then
 		
-		local limit = math.rad( 3 )
-		angle = Utils.clamp( math.rad( turnAngle - 90 ) - AutoTractor.getLimitedToolAngle( self ), -0.5*self.acDimensions.maxSteeringAngle, 0.5*self.acDimensions.maxSteeringAngle )
+		local x,z, allowedToDrive = AutoTractor.getTurnVector( self );
+		if self.acParameters.leftAreaActive then x = -x end
+		local newTurnAngle = turnAngle - 90 + math.deg( math.atan2( z, x ) )
+
+		local limit  = math.rad( 6 )
 		
+		angle = Utils.clamp( math.rad( newTurnAngle ), AutoTractor.getMaxAngleWithTool( self, true ), AutoTractor.getMaxAngleWithTool( self, false ) )
+
 		if AutoTractor.acDevFeatures then
-			print("T95: "..degToString( turnAngle ).." "..radToString( AutoTractor.getToolAngle( self ) ).." => "..radToString( angle ))
+			print("T95: "..radToString( angle ).." "..degToString( turnAngle ).." "..degToString( newTurnAngle ).." "..tostring(x).." / "..tostring(z).." "..radToString( math.atan2( z, x )))
 		end
 		
-		if math.abs( angle ) < limit and math.abs( AutoTractor.getToolAngle( self ) ) < limit then
+		if      math.abs( newTurnAngle ) < angleOffset
+				and math.abs( AutoTractor.getToolAngle( self ) ) < ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle then
 			self.acTurnStage = self.acTurnStage + 1;					
 			self.turnTimer   = self.acDeltaTimeoutRun;
 			angle            = 0
@@ -1824,15 +1872,19 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 -- move backwards (straight)		
 	elseif self.acTurnStage == 96 then		
 		moveForwards = false;					
-		angle  = nil;
-		local toolAngle = AutoSteeringEngine.getToolAngle( self );
-		angle2 = math.min( math.max( toolAngle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
-		
+	
 		local x,z, allowedToDrive = AutoTractor.getTurnVector( self );
 		if self.acParameters.leftAreaActive then x = -x end
 		
+		local target = 90
+		
+		if x > 2 then
+			target = target - Utils.clamp( math.deg(math.atan2( z, x )), -15, 15 )
+		end
+		
+		angle  = AutoTractor.getStraighBackwardsAngle( self, target )
 		if AutoTractor.acDevFeatures then
-			print("T96: "..tostring(x).." / "..tostring(z))
+			print("T96: "..tostring(x).." / "..tostring(z).." "..radToString( math.atan2( z, x )))
 		end
 		
 		if ( detected or x < -10 ) and not fruitsDetected then				
@@ -1840,6 +1892,51 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		end
 
 
+
+--==============================================================				
+--==============================================================				
+-- going back w/o reverse
+	elseif self.acTurnStage == 100 then
+		self.acTurnStage   = self.acTurnStage + 1;					
+		self.turnTimer     = self.acDeltaTimeoutRun;
+		angle              = AutoTractor.getMaxAngleWithTool( self, false )
+
+		AutoTractor.setAIImplementsMoveDown(self,false);
+	
+--==============================================================				
+-- turn 180° I
+	elseif self.acTurnStage == 101 then
+		angle = AutoTractor.getMaxAngleWithTool( self, false )
+			
+		if math.abs( turnAngle ) > 180 - angleOffset then
+			self.acTurnStage   = self.acTurnStage + 1;					
+			self.turnTimer     = self.acDeltaTimeoutRun;
+			angle              = 0
+		end
+
+--==============================================================				
+-- turn 180° I
+	elseif self.acTurnStage == 102 then
+		angle = 0
+
+		local x,z, allowedToDrive = AutoTractor.getTurnVector( self );
+		if z < -5 then
+			self.acTurnStage   = self.acTurnStage + 1;					
+			self.turnTimer     = self.acDeltaTimeoutRun;
+			angle              = AutoTractor.getMaxAngleWithTool( self, false )
+		end
+		
+--==============================================================				
+-- turn 180° II
+	elseif self.acTurnStage == 103 then
+		angle = AutoTractor.getMaxAngleWithTool( self, false )
+			
+		if math.abs( turnAngle ) < angleOffset then
+			self.acTurnStage   = -1				
+			self.turnTimer     = self.acDeltaTimeoutRun;
+			angle              = 0
+		end
+		
 		
 --==============================================================				
 --==============================================================				
@@ -2002,7 +2099,13 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 				AutoSteeringEngine.setChainStraight( self );	
 			elseif self.acTurn2Outside then
 		-- turn to outside because we are in the middle of the field
-				self.acTurnStage = 1;
+				if     self.acTurnMode == "C" 
+						or self.acTurnMode == "8" 
+						or self.acTurnMode == "O" then
+					self.acTurnStage = 100
+				else
+					self.acTurnStage = 1;
+				end
 				self.turnTimer = self.acDeltaTimeoutWait;
 			elseif self.acTurnMode == "C" 
 					or self.acTurnMode == "8" 
@@ -2153,7 +2256,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			--(  math.abs( angle ) > 0.5 * angleMax
 			--or math.abs( angle - AutoSteeringEngine.currentSteeringAngle( self ) )  > 0.25 * angleMax
 			(  math.abs( angle ) > 0.5 * self.acDimensions.maxSteeringAngle
-			or math.abs( angle - AutoSteeringEngine.currentSteeringAngle( self ) )  > 0.25 * self.acDimensions.maxSteeringAngle
+			or math.abs( angle - AutoSteeringEngine.currentSteeringAngle( self ) )  > ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle
 			--or self.acTurnStage == -3
 			--or self.acTurnStage == -13
 			--or -3 <= self.acTurnStage and self.acTurnStage < 0 ) then
@@ -2203,8 +2306,8 @@ end
 ------------------------------------------------------------------------
 -- AutoTractor:navigateToSavePoint
 ------------------------------------------------------------------------
-function AutoTractor:navigateToSavePoint()
-	local angle2, onTrack = AutoSteeringEngine.navigateToSavePoint( self, true, AutoTractor.navigationFallbackRetry )
+function AutoTractor:navigateToSavePoint( turn75 )
+	local angle2, onTrack = AutoSteeringEngine.navigateToSavePoint( self, true, AutoTractor.navigationFallbackRetry, turn75 )
 	if onTrack then
 		self.turnTimer     = self.acDeltaTimeoutNoTurn;
 		AutoTractor.setAIImplementsMoveDown(self,true);
@@ -2300,6 +2403,126 @@ function AutoTractor:getToolAngle()
 end
 	
 ------------------------------------------------------------------------
+-- AutoTractor:getToolAngle
+------------------------------------------------------------------------
+function AutoTractor:getStraighBackwardsAngle( iTarget )
+
+	local target = math.rad( Utils.getNoNil( iTarget, 0 ) )
+
+	local toolAngle = AutoSteeringEngine.getToolAngle( self )
+	local turnAngle = AutoSteeringEngine.getTurnAngle( self ) 
+	if self.acParameters.leftAreaActive then
+		turnAngle = -turnAngle
+	else
+		toolAngle = -toolAngle
+	end
+	turnAngle = AutoSteeringEngine.normalizeAngle( turnAngle - target )
+	 
+	local toolAngle2 = toolAngle + turnAngle
+
+	local angle = 0
+	local info  = "?"
+	local limit = math.rad( 1 )
+	
+--	if     math.abs( toolAngle ) > 0.5 * self.acDimensions.maxSteeringAngle then
+--		info = "xx"
+--		if toolAngle < 0 then
+--			angle = -self.acDimensions.maxSteeringAngle
+--		else
+--			angle =  self.acDimensions.maxSteeringAngle
+--		end
+----else
+----	info = "O"
+----	local f = math.min( 1, 2 * math.abs( toolAngle - turnAngle ) / self.acDimensions.maxSteeringAngle )
+----	angle = f * ( toolAngle + turnAngle ) + ( 1 - f ) * turnAngle 
+--	else 
+--		local f  = math.min( 1, 5 * math.abs( toolAngle2 ) / self.acDimensions.maxSteeringAngle )
+--		local a1 = 0
+--		local a2 = 0
+--
+--		if     toolAngle2 >  limit then
+--			a1 =  self.acDimensions.maxSteeringAngle
+--		elseif toolAngle2 < -limit then
+--			a1 = -self.acDimensions.maxSteeringAngle
+--		else
+--			a1 = toolAngle2 / limit * self.acDimensions.maxSteeringAngle
+--		end
+--		if     turnAngle >  limit then
+--			a2 = -self.acDimensions.maxSteeringAngle
+--		elseif turnAngle < -limit then
+--			a2 =  self.acDimensions.maxSteeringAngle
+--		else
+--			a2 = -turnAngle / limit * self.acDimensions.maxSteeringAngle
+--		end
+--		
+--		
+--		angle = f * ( a1 ) + ( 1-f ) * a2
+----elseif toolAngle2 < -limit then
+----	info  = "aR"
+----	angle =  -toolAngle2
+----elseif toolAngle2 >  limit then
+----	info  = "aL"
+----	angle =  toolAngle2
+----elseif turnAngle < -limit then
+----	info  = "vR"
+----	angle = -turnAngle
+----elseif turnAngle >  limit then
+----	info  = "vL"
+----	angle =  turnAngle
+----else
+----	info  = "ok"
+----	angle = 0
+--	end
+
+	local toolAngleT = Utils.clamp( -toolAngle2, -ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle, ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle )
+	
+	if math.abs( toolAngle ) < math.rad( 1 ) then
+		angle = -turnAngle 
+	else
+		angle = Utils.clamp( 2 * ( toolAngle - toolAngleT ), -self.acDimensions.maxSteeringAngle, self.acDimensions.maxSteeringAngle )
+	end
+	
+	if AutoTractor.acDevFeatures then
+		print("gSBA: "..info.." "..degToString( iTarget ).." "..radToString( turnAngle+target ).." "..radToString( toolAngle ).." => "..radToString( toolAngle2 ).." "..radToString( toolAngleT ).." => "..radToString( angle ))
+	end
+	
+	angle = Utils.clamp( angle, -self.acDimensions.maxSteeringAngle, self.acDimensions.maxSteeringAngle )
+
+	return angle 
+end
+	
+------------------------------------------------------------------------
+-- AutoTractor:getToolAngle
+------------------------------------------------------------------------
+function AutoTractor:getStraighForwardsAngle( iTarget )
+
+	local target = math.rad( Utils.getNoNil( iTarget, 0 ) )
+
+	local toolAngle = AutoSteeringEngine.getToolAngle( self )
+	local turnAngle = AutoSteeringEngine.getTurnAngle( self ) 
+	if self.acParameters.leftAreaActive then
+		turnAngle = -turnAngle
+	else
+		toolAngle = -toolAngle
+	end
+	turnAngle = turnAngle - target 
+	
+	angle = 0
+	
+	if      math.abs( toolAngle ) > math.abs( turnAngle ) then
+		angle = -toolAngle 
+	else
+		angle = turnAngle 
+	end
+	
+	print("gSFA: "..degToString( iTarget ).." "..radToString( toolAngle ).." "..radToString( turnAngle ).." => "..radToString( angle ))
+	
+	angle = Utils.clamp( angle, -self.acDimensions.maxSteeringAngle, self.acDimensions.maxSteeringAngle )
+
+	return angle 
+end
+	
+------------------------------------------------------------------------
 -- AutoTractor:getLimitedToolAngle
 ------------------------------------------------------------------------
 function AutoTractor:getLimitedToolAngle( iLimit )
@@ -2318,3 +2541,4 @@ function AutoTractor:getLimitedToolAngle( iLimit )
 	
 	return toolAngle
 end
+
