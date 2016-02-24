@@ -5,6 +5,7 @@
 	<title>
 		<en>Auto Tractor</en>
 		<de>Auto Traktor</de>
+		<cz>AutoTractor</cz>
 	</title>
 	<description>
 		<en>
@@ -17,6 +18,8 @@
 			<![CDATA[Auto Tractor - Traduzione italiana by Cristiano Magro]]></it>
 		<ru>
 			<![CDATA[Auto Tractor - умный тракторист. Перевод Gonimy Vetrom]]></ru>
+		<cz>
+			<![CDATA[AutoTractor - český překlad by Albi]]></cz>
 	</description>
 	<iconFilename>dds/store.dds</iconFilename>
 	<multiplayer supported="true"/>
