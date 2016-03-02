@@ -255,7 +255,7 @@ function AutoTractor:draw()
 		local alwaysDrawTitle = false
 		if      self.acParameters ~= nil
 				and self.acParameters.enabled 
-				and ( self.isAITractorActivated or self.acTurnStage >= 97 ) then
+				and ( self.isAITractorActivated or self.acTurnStage >= 197 ) then
 			alwaysDrawTitle = true
 		end
 		AutoTractorHud.draw(self,self.acLCtrlPressed,alwaysDrawTitle);
@@ -272,7 +272,7 @@ function AutoTractor:draw()
 
 		if AutoTractor.evalAutoSteer(self) then
 			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_STEER_ON"), InputBinding.AUTO_TRACTOR_STEER);
-		elseif self.acTurnStage >= 98 then
+		elseif self.acTurnStage >= 198 then
 			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_STEER_OFF"),InputBinding.AUTO_TRACTOR_STEER);
 		end	
 	elseif self.acLAltPressed then
@@ -424,7 +424,7 @@ function AutoTractor:evalFrontPacker()
 end
 
 function AutoTractor:setFrontPacker(enabled)
-	self.acParameters.frontPacker = enabled;
+	self.acParameters.frontPacker = enabled
 end
 
 function AutoTractor:evalAreaLeft()
@@ -636,19 +636,19 @@ function AutoTractor:evalAutoSteer()
 	if not self.acParameters.enabled then 
 		return true 
 	end 
-	return self.isAITractorActivated or self.acTurnStage < 98
+	return self.isAITractorActivated or self.acTurnStage < 198
 end
 
 function AutoTractor:onAutoSteer(enabled)
 	if self.isAITractorActivated then
-		if self.acTurnStage >= 98 then
+		if self.acTurnStage >= 198 then
 			self.acTurnStage   = 0
 		end
 	elseif enabled then
 		AutoTractor.initMogliHud(self)
 		--self.setAIImplementsMoveDown(self,true);
 		self.acLastSteeringAngle = nil;
-		self.acTurnStage   = 98
+		self.acTurnStage   = 198
 		self.acRotatedTime = 0
 	else
 		self.acTurnStage   = 0
@@ -658,7 +658,7 @@ function AutoTractor:onAutoSteer(enabled)
 end
 
 function AutoTractor:onMagic(enabled)
-	if not self.isAITractorActivated and self.acTurnStage >= 98 then
+	if not self.isAITractorActivated and self.acTurnStage >= 198 then
 		AutoTractor.initMogliHud(self)
 		AutoSteeringEngine.invalidateField( self )		
 		AITractor.updateToolsInfo(self);
@@ -801,6 +801,10 @@ end
 
 function AutoTractor:update(dt)
 
+	if self.setIsReverseDriving ~= nil then
+		self.acParameters.inverted = self.isReverseDriving
+	end		
+
 	if      self.articulatedAxis ~= nil 
 			and ASEGlobals.artAxisMode > 0
 			and self.articulatedAxis.componentJoint ~= nil
@@ -853,7 +857,7 @@ function AutoTractor:update(dt)
 				end			
 			end
 		elseif AutoTractor.mbHasInputEvent( "AUTO_TRACTOR_STEER" ) then
-			if self.acTurnStage < 98 then
+			if self.acTurnStage < 198 then
 				AutoTractor.onAutoSteer(self, true)
 			else
 				AutoTractor.onAutoSteer(self, false)
@@ -910,7 +914,7 @@ function AutoTractor:update(dt)
 		end
 	end;
 	
-	if self.acTurnStage >= 98 then
+	if self.acTurnStage >= 198 then
     self.stopMotorOnLeave = false
     self.deactivateOnLeave = false
 	end
@@ -925,10 +929,10 @@ function AutoTractor:update(dt)
 		if self.acParameters ~= nil and self.acParameters.enabled then			
 			if      ASEGlobals.showTrace > 0 
 					and self.acDimensions ~= nil
-					and ( self.isAITractorActivated or self.acTurnStage >= 98 ) then	
+					and ( self.isAITractorActivated or self.acTurnStage >= 198 ) then	
 				AutoSteeringEngine.drawLines( self );
 			else
-				if not ( self.isAITractorActivated or self.acTurnStage >= 98 ) then	
+				if not ( self.isAITractorActivated or self.acTurnStage >= 198 ) then	
 					AutoTractor.checkState( self )
 				end
 				AutoSteeringEngine.drawMarker( self );
@@ -950,7 +954,7 @@ function AutoTractor:update(dt)
 		if self.acDimensions ~= nil and self.acDimensions.distance ~= nil then
 			AutoTractorHud.setInfoText( self, AutoTractorHud.getText( "AUTO_TRACTOR_WORKWIDTH" ) .. string.format(" %0.2fm", self.acDimensions.distance+self.acDimensions.distance) )
 		end
-		if self.acTurnStage ~= nil and self.acTurnStage ~= 0 and self.acTurnStage < 97 then
+		if self.acTurnStage ~= nil and self.acTurnStage ~= 0 and self.acTurnStage < 197 then
 			AutoTractorHud.setInfoText( self, AutoTractorHud.getInfoText(self) .. string.format(" (%i)", self.acTurnStage) )
 		end
 	end
@@ -980,7 +984,7 @@ function AutoTractor:updateTick( dt )
 				and self.isClient 
 				and self:getIsActive() 
 				and not self.acParameters.noSteering
-				and ( self.isAITractorActivated or self.acTurnStage >= 98 ) then
+				and ( self.isAITractorActivated or self.acTurnStage >= 198 ) then
 			self.acAxisSide = InputBinding.getDigitalInputAxis(InputBinding.AXIS_MOVE_SIDE_VEHICLE)
 			if InputBinding.isAxisZero(self.acAxisSide) then
 				self.acAxisSide = InputBinding.getAnalogInputAxis(InputBinding.AXIS_MOVE_SIDE_VEHICLE)
@@ -1001,9 +1005,13 @@ function AutoTractor:updateTick( dt )
 			AutoSteeringEngine.checkTools( self, true )
 		end
 		
-		if self.acRefNodeIsInverted ~= self.acParameters.inverted then
-			self.acRefNodeIsInverted = self.acParameters.inverted
-			if self.acParameters.inverted then
+		local inverted = self.acParameters.inverted
+	--if self.isReverseDriving then
+	--	inverted = not inverted
+	--end
+		if self.acRefNodeIsInverted ~= inverted then
+			self.acRefNodeIsInverted = inverted
+			if inverted then
 				setRotation( self.acRefNode, 0, math.pi, 0 )
 			else
 				setRotation( self.acRefNode, 0, 0, 0 )
@@ -1013,14 +1021,14 @@ function AutoTractor:updateTick( dt )
 		end
 		
 		if not ( ( self.isAITractorActivated and self.acParameters.enabled )
-					or self.acTurnStage>= 98 ) then
+					or self.acTurnStage>= 198 ) then
 			AutoTractor.setStatus( self, 0 )
 		end
 		
 		if      not self.isAITractorActivated 
 				and math.abs(self.acAxisSide) <= 0.1
 				and self.isServer
-				and self.acTurnStage        >= 98 then
+				and self.acTurnStage        >= 198 then
 			AutoTractor.autoSteer(self,dt)
 		end
 		
@@ -1510,6 +1518,10 @@ end;
 ------------------------------------------------------------------------
 function AutoTractor:setAIImplementsMoveDown( moveDown, immediate, noEventSend )
 
+	if not ( moveDown ) and immediate == nil then
+		immediate = true
+	end
+	
 	if not ( noEventSend ) then
 		local value = 0
 		if moveDown then
@@ -1674,7 +1686,7 @@ function AutoTractor:autoSteer(dt)
 	local smooth = 0
 	local traceLength = AutoSteeringEngine.getTraceLength(self)
 
-	if self.acTurnStage == 99 and traceLength > 3 then
+	if self.acTurnStage == 199 and traceLength > 3 then
 		smooth = math.min( math.max( 0.1 * ( traceLength - 1 ), 0 ), 0.875 )
 	end
 	
@@ -1683,8 +1695,8 @@ function AutoTractor:autoSteer(dt)
 	
 	if detected then
 		AutoTractor.setStatus( self, 1 )
-		if self.acTurnStage ~= 99 then
-			self.acTurnStage = 99
+		if self.acTurnStage ~= 199 then
+			self.acTurnStage = 199
 			AutoSteeringEngine.clearTrace( self );
 			AutoSteeringEngine.saveDirection( self, false );
 		end
@@ -1695,8 +1707,8 @@ function AutoTractor:autoSteer(dt)
 		angle = 0;
 		
 		self.turnTimer = self.turnTimer - dt;
-		if self.acTurnStage == 99 and self.turnTimer < 0 then
-			self.acTurnStage = 98
+		if self.acTurnStage == 199 and self.turnTimer < 0 then
+			self.acTurnStage = 198
 		end
 	end
 	
@@ -1706,9 +1718,11 @@ function AutoTractor:autoSteer(dt)
 		if noReverseIndex > 0 then
 			local toolAngle = AutoSteeringEngine.getToolAngle( self )
 			angle = math.min( math.max( toolAngle - angle, -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle );
+			detected = true
 		else
 			angle = -angle 
 		end
+		self.acTurnStage = 198
 	end
 	
 	local targetRotTime = 0
@@ -1722,7 +1736,7 @@ function AutoTractor:autoSteer(dt)
 	local aiSteeringSpeed = self.aiSteeringSpeed;
 	--if detected then aiSteeringSpeed = aiSteeringSpeed * 0.5 end
 	
-	if self.isEntered then
+	if self.isEntered and detected and math.abs( self.acAxisSide ) < 0.1 then
 		AutoSteeringEngine.steer( self, dt, angle, aiSteeringSpeed, detected );
 	end
 	
@@ -1777,6 +1791,10 @@ function AutoTractor:loadFromAttributesAndNodes(xmlFile, key, resetVehicles)
 	
 	self.acParameters.leftAreaActive  = not self.acParameters.rightAreaActive;
 	self.acDimensions                 = nil;
+	
+	if self.setIsReverseDriving ~= nil then
+		self:setIsReverseDriving( self.acParameters.inverted, false )
+	end
 
 	return BaseMission.VEHICLE_LOAD_OK;
 end
@@ -1967,12 +1985,17 @@ function AutoTractor.calculateHeadland( turnMode, realWidth, zBack, toolDist, ra
 		width = width + 2
 	end
 	
+	local frontToBack = 1
+	if big then
+		frontToBack = math.max( toolDist - zBack, 1 )
+	end
+	
 	local ret = 0
 	if     turnMode == "A"
 			or turnMode == "L" then
-		ret   = math.max( 2, toolDist ) + math.abs( wheelBase ) + math.abs( zBack ) + math.max( 1, toolDist - zBack )
+		ret   = math.max( 2, toolDist ) + math.abs( wheelBase ) + math.abs( zBack ) + frontToBack
 		if big then
-			ret = ret + 3 
+			ret = ret + 3
 		end
 		ret   = math.max( ret, width ) 
 	elseif turnMode == "C" then
@@ -1983,9 +2006,9 @@ function AutoTractor.calculateHeadland( turnMode, realWidth, zBack, toolDist, ra
 		if big then
 			z = z + 1.1
 		end
-		ret   = width + math.max( -zBack, 0 ) + math.max( toolDist - zBack, z ) + math.max( toolDist, 0 ) + radius
+		ret   = width + math.max( -zBack, 0 ) + math.max( frontToBack, z ) + math.max( toolDist, 0 ) + radius
 	else
-		ret   = width + math.max( -zBack, 0 ) + math.max( toolDist - zBack, 0 ) + math.max( toolDist, 0 ) + radius
+		ret   = width + math.max( -zBack, 0 ) + frontToBack + math.max( toolDist, 0 ) + radius
 	end
 	
 	if ret < 0 then
@@ -2315,6 +2338,13 @@ function AutoTractor:setNextTurnStage(noEventSend)
     end
   end
 end;
+
+function AutoTractor:setIsReverseDriving( isReverseDriving, noEventSend )
+	if self.acParameters ~= nil then
+		self.acParameters.inverted = isReverseDriving
+		AutoTractor.sendParameters( self )
+	end
+end
 
 ------------------------------------------------------------------------
 -- Event stuff

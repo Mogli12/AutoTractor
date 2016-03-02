@@ -16,6 +16,7 @@
     <average type="float" value="1" />
     <!--angleStep type="degree" value="15" /-->
     <angleStep type="degree" value="4" />
+    <angleStepDec type="degree" value="0.05" /> <!-- reduce by 1° per 20m -->
     <angleFactorNoFix type="float" value="2" />
     <chainDivide value="7" />
     <chainDivide2 value="4" />
@@ -28,7 +29,7 @@
     <chain2LenInc type="float" value="2.0" />
     <chain2LenMax type="float" value="99" />
     <chainMax value="6" />
-    <chainFix value="5" />
+    <chainFix value="6" />
     <chainMin value="4" />
     <chainAvg value="1" />
 		<chainBorder value="2" />
@@ -70,7 +71,7 @@
 		<limitInside type="bool" value="true" />
 		<algorithm value="1" />
 		<!--fruitBufferSq type="float" value="0.04" /-->
-		<fruitBufferFactor type="float" value="20" />
+		<fruitBufferFactor type="float" value="10" />
 		<maxDtSum value="65" /> <!-- 10 fps => 100 ms divide by 1.5 for statistics reason => dt=66.67 ms  -->
 		<maxDtDist type="float" value="0.03434844" /> <!-- 10 km/h => 2.78 m/s => 0.278 m @ 10 fps; divide by 1.5 and square-->
 		<ploughTransport type="bool" value="false" />
@@ -81,4 +82,6 @@
 		<maxToolAngleF type="float" value="0.375" />
 		<enableYUTurn type="bool" value="false" />
 		<aiRescueDistSq type="float" value="900" />
+		<raiseNoFruits type="bool" value="false" />
+		<lowerAdvance type="float" value="1" />
 </ASEGlobals>

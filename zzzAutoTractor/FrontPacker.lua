@@ -60,7 +60,11 @@ FrontPackerAreaEvent.readStream = function (self, streamId, connection)
 		local x2 = values[vi*3 + 3].x
 		local z2 = values[vi*3 + 3].y
 
-		FrontPackerAreaEvent.updateCultivatorArea(x, z, x1, z1, x2, z2, not limitToField, not limitGrassDestructionToField, angle)
+		if getfenv(0)["modSoilMod2"] == nil then
+			FrontPackerAreaEvent.updateCultivatorArea(x, z, x1, z1, x2, z2, not limitToField, not limitGrassDestructionToField, angle)
+		else
+			FrontPackerAreaEvent.updateCultivatorAreaSoilMod(x, z, x1, z1, x2, z2, not limitToField, not limitGrassDestructionToField, angle)
+		end
 	end
 
 	return 
@@ -117,14 +121,17 @@ FrontPackerAreaEvent.run = function (self, connection)
 	return 
 end
 
+function FrontPackerAreaEvent.updateDestroyCommonArea(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ, limitToField)	
+	g_currentMission.tyreTrackSystem:eraseParallelogram(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ)
+end
+
 function FrontPackerAreaEvent.updateCultivatorArea(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ, forced, commonForced, angle)
 
 	forced = Utils.getNoNil(forced, true)
 	commonForced = Utils.getNoNil(commonForced, true)
 	local detailId = g_currentMission.terrainDetailId
 
-	--Utils.updateDestroyCommonArea(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ, not commonForced)
-	g_currentMission.tyreTrackSystem:eraseParallelogram(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ)
+	FrontPackerAreaEvent.updateDestroyCommonArea(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ, not commonForced)
 
 	local x, z, widthX, widthZ, heightX, heightZ = Utils.getXZWidthAndHeight(detailId, startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ)
 	
@@ -184,6 +191,107 @@ function FrontPackerAreaEvent.updateCultivatorArea(startWorldX, startWorldZ, wid
 	
 end
 
+function FrontPackerAreaEvent.updateCultivatorAreaSoilMod(startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ, forced, commonForced, angle)
+
+   local dataStore = {}
+   dataStore.forced        = Utils.getNoNil(forced, true);
+   dataStore.commonForced  = Utils.getNoNil(commonForced, true);
+   dataStore.angle         = angle
+   dataStore.area          = 0;
+   dataStore.includeMask   = 2^g_currentMission.cultivatorChannel;
+    
+   local sx,sz,wx,wz,hx,hz = Utils.getXZWidthAndHeight(nil, startWorldX, startWorldZ, widthWorldX, widthWorldZ, heightWorldX, heightWorldZ);
+
+   -- Setup phase - If any plugin needs to modify anything in dataStore
+	 local backup 
+	 if Utils.fmcUpdateDestroyCommonArea ~= nil and Utils.fmcUpdateDestroyDynamicFoliageLayers ~= nil then	 
+		 backup = Utils.fmcUpdateDestroyCommonArea
+		 Utils.fmcUpdateDestroyCommonArea = Utils.fmcUpdateDestroyDynamicFoliageLayers
+	 end
+	 
+   for _,callFunc in pairs(Utils.fmcPluginsUpdateCultivatorAreaSetup) do
+      callFunc(sx,sz,wx,wz,hx,hz, dataStore, nil)
+   end
+
+  -- FS15 addition
+  setDensityCompareParams(g_currentMission.terrainDetailId, "greater", 0, 0, dataStore.includeMask, 0);
+  _,dataStore.areaBefore,_ = getDensityParallelogram(
+      g_currentMission.terrainDetailId, 
+      sx,sz,wx,wz,hx,hz, 
+      g_currentMission.terrainDetailTypeFirstChannel, g_currentMission.terrainDetailTypeNumChannels
+  );
+  setDensityCompareParams(g_currentMission.terrainDetailId, "greater", -1);
+	
+  -- Before phase - Give plugins the possibility to affect foliage-layer(s) and dataStore, before the default "cultivating" occurs.
+  for _,callFunc in pairs(Utils.fmcPluginsUpdateCultivatorAreaPreFuncs) do
+    callFunc(sx,sz,wx,wz,hx,hz, dataStore, nil)
+  end
+
+	--start insert
+	local detailId = g_currentMission.terrainDetailId
+	setDensityMaskParams(detailId, "between", 1, 2 ^ g_currentMission.cultivatorChannel + 2 ^ g_currentMission.ploughChannel )	
+	--end insert
+
+  -- Default "cultivating"
+  if dataStore.forced then
+    dataStore.area = dataStore.area + setDensityParallelogram(
+            g_currentMission.terrainDetailId, 
+            sx,sz,wx,wz,hx,hz, 
+            g_currentMission.terrainDetailTypeFirstChannel, g_currentMission.terrainDetailTypeNumChannels, 
+            2^g_currentMission.cultivatorChannel
+        );
+    if dataStore.angle ~= nil then
+      setDensityParallelogram(
+                g_currentMission.terrainDetailId, 
+                sx,sz,wx,wz,hx,hz, 
+                g_currentMission.terrainDetailAngleFirstChannel, g_currentMission.terrainDetailAngleNumChannels, 
+                dataStore.angle
+            );
+    end
+  else
+    dataStore.area = dataStore.area + setDensityMaskedParallelogram(
+            g_currentMission.terrainDetailId, 
+            sx,sz,wx,wz,hx,hz, 
+            g_currentMission.terrainDetailTypeFirstChannel, g_currentMission.terrainDetailTypeNumChannels, 
+            g_currentMission.terrainDetailId, g_currentMission.terrainDetailTypeFirstChannel, g_currentMission.terrainDetailTypeNumChannels, 
+            2^g_currentMission.cultivatorChannel
+        );
+    if dataStore.angle ~= nil then
+      setDensityMaskedParallelogram(
+                g_currentMission.terrainDetailId, 
+                sx,sz,wx,wz,hx,hz, 
+                g_currentMission.terrainDetailAngleFirstChannel, g_currentMission.terrainDetailAngleNumChannels, 
+                g_currentMission.terrainDetailId, g_currentMission.terrainDetailTypeFirstChannel, g_currentMission.terrainDetailTypeNumChannels, 
+                dataStore.angle
+            );
+    end
+  end
+
+	--start insert
+	setDensityMaskParams(detailId, "greater", 0)
+	--end insert
+	
+  -- FS15 addition
+  setDensityCompareParams(g_currentMission.terrainDetailId, "greater", 0, 0, dataStore.includeMask, 0);
+  _,dataStore.areaAfter,_ = getDensityParallelogram(
+        g_currentMission.terrainDetailId, 
+        sx,sz,wx,wz,hx,hz, 
+        g_currentMission.terrainDetailTypeFirstChannel, g_currentMission.terrainDetailTypeNumChannels
+  );
+  setDensityCompareParams(g_currentMission.terrainDetailId, "greater", -1);
+    
+  -- After phase - Give plugins the possibility to affect foliage-layer(s) and dataStore, after the default "cultivating" have been done.
+  for _,callFunc in pairs(Utils.fmcPluginsUpdateCultivatorAreaPostFuncs) do
+    callFunc(sx,sz,wx,wz,hx,hz, dataStore, nil)
+  end
+	
+	if backup ~= nil then
+		Utils.fmcUpdateDestroyCommonArea = backup
+	end
+    
+  return (dataStore.areaAfter - dataStore.areaBefore), dataStore.area;
+end
+
 FrontPackerAreaEvent.runLocally = function (workAreas, limitToField, limitGrassDestructionToField, angle)
 	local numAreas = table.getn(workAreas)
 	local refX, refY = nil
@@ -225,7 +333,11 @@ FrontPackerAreaEvent.runLocally = function (workAreas, limitToField, limitGrassD
 		local z1 = values[vi*3 + 2].y
 		local x2 = values[vi*3 + 3].x
 		local z2 = values[vi*3 + 3].y
-		areaSum = areaSum + FrontPackerAreaEvent.updateCultivatorArea(x, z, x1, z1, x2, z2, not limitToField, not limitGrassDestructionToField, angle)
+		if getfenv(0)["modSoilMod2"] == nil then
+			areaSum = areaSum + FrontPackerAreaEvent.updateCultivatorArea(x, z, x1, z1, x2, z2, not limitToField, not limitGrassDestructionToField, angle)
+		else
+			areaSum = areaSum + FrontPackerAreaEvent.updateCultivatorAreaSoilMod(x, z, x1, z1, x2, z2, not limitToField, not limitGrassDestructionToField, angle)
+		end
 	end
 
 	return areaSum
