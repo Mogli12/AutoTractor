@@ -1910,6 +1910,7 @@ function AutoSteeringEngine.hasFruits( vehicle, widthFactor )
 	
 	if  ( vehicle.aseChain ~= nil and vehicle.aseLRSwitch ~= nil and vehicle.aseToolCount ~= nil and vehicle.aseToolCount >= 1 ) and vehicle.aseToolParams ~= nil and table.getn( vehicle.aseToolParams ) == vehicle.aseToolCount then
 		for i = 1,vehicle.aseToolCount do	
+			vehicle.aseToolParams[i].hasFruits = false
 			local tool      = vehicle.aseTools[vehicle.aseToolParams[i].i]
 			local gotFruits = false
 			local back      = vehicle.aseToolParams[i].zReal + math.min( vehicle.aseToolParams[i].zBack - vehicle.aseToolParams[i].zReal -1, -1 )
@@ -1989,6 +1990,7 @@ function AutoSteeringEngine.hasFruits( vehicle, widthFactor )
 			end
 			
 			if gotFruits then
+				vehicle.aseToolParams[i].hasFruits = true
 				if     tool.ignoreAI then
 				-- ignore 
 				else
@@ -6809,6 +6811,8 @@ function AutoSteeringEngine.ensureToolIsLowered( vehicle, isLowered, indexFilter
 			end
 		end
 		if doit then
+			if AutoTractor.acDevFeatures then AutoTractor.printCallstack() end
+		
 			vehicle.aseTools[vehicle.aseToolParams[i].i].lowerStateOnFruits   = nil 
 			vehicle.aseTools[vehicle.aseToolParams[i].i].acWaitUntilIsLowered = g_currentMission.time + vehicle.acDeltaTimeoutRun
 			for _,implement in pairs(vehicle.attachedImplements) do

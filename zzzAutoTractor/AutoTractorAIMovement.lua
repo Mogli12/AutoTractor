@@ -2017,14 +2017,6 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		moveForwards     = true;
 
 		if self.acTurnStage >= -3 then
-			if self.acImplementsMoveDown then
-			--nothing
-			else
-				AutoTractor.setAIImplementsMoveDown(self,true);
-			end
-		end
-				
-		if fruitsDetected and self.acTurnStage >= -3 then
 			self.acTurnStage = self.acTurnStage -20;
 			self.turnTimer   = self.acDeltaTimeoutNoTurn;
 		
@@ -2043,12 +2035,9 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		
 --==============================================================				
 	elseif -23 <= self.acTurnStage and self.acTurnStage < -20 then
-		--allowedToDrive = false;
-		
-		--if self.turnTimer < 0 then
-			AutoSteeringEngine.ensureToolIsLowered( self, true )
-			self.acTurnStage = self.acTurnStage + 10;					
-		--end;
+		--AutoSteeringEngine.ensureToolIsLowered( self, true )
+		AutoTractor.setAIImplementsMoveDown(self,true);
+		self.acTurnStage = self.acTurnStage + 10;					
 				
 --==============================================================				
 -- threshing...					

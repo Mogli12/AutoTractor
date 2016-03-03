@@ -1518,10 +1518,6 @@ end;
 ------------------------------------------------------------------------
 function AutoTractor:setAIImplementsMoveDown( moveDown, immediate, noEventSend )
 
-	if not ( moveDown ) and immediate == nil then
-		immediate = true
-	end
-	
 	if not ( noEventSend ) then
 		local value = 0
 		if moveDown then
