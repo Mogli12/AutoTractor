@@ -198,7 +198,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 	if AutoSteeringEngine.checkIsAnimPlaying( self, self.acImplementsMoveDown ) then
 		self.acAnimWaitTurnStage = self.acTurnStage
 		if    self.acAnimWaitTimer == nil then
-			self.acAnimWaitTimer = self.acDeltaTimeoutWait --self.acDeltaTimeoutStart
+			self.acAnimWaitTimer = self.acDeltaTimeoutStart
 			self.acIsAnimPlaying = true
 		elseif self.acAnimWaitTimer > 0 then
 			self.acAnimWaitTimer = self.acAnimWaitTimer - dt
@@ -1943,6 +1943,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			angle            = 0
 		end
 			
+--==============================================================				
 -- forward and reduce tool angle
 	elseif self.acTurnStage == 111 then
 
@@ -1964,7 +1965,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		end
 	
 --==============================================================				
--- forward and reduce tool angle
+-- backwards and reduce tool angle
 	elseif self.acTurnStage == 112 then
 
 		moveForwards = false
@@ -1978,11 +1979,12 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		end
 	
 --==============================================================				
--- forward and reduce tool angle
+-- backwards and reduce tool angle
 	elseif self.acTurnStage == 113 then
 
 		moveForwards     = false
-		detected, angle2 = AutoTractor.detectAngle( self )
+		angle            = AutoTractor.getStraighBackwardsAngle( self, 180 )
+		detected         = AutoTractor.detectAngle( self )
 		if not detected then
 			self.turnTimer   = self.acDeltaTimeoutRun;
 		elseif self.turnTimer < 0 then
@@ -2137,7 +2139,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 					self.acTurnStage = 50;
 				elseif self.acTurnMode == "Y" then
 					self.acTurnStage = 40;
-				else
+				else--if self.acTurnMode == "T" then
 					self.acTurnStage = 20;
 					
 					if noReverseIndex > 0 and AutoSteeringEngine.noTurnAtEnd( self ) then

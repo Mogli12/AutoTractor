@@ -383,14 +383,21 @@ function AutoSteeringEngine.getChainResult( vehicle, detected, border, indexMax 
 	
 	angle = Utils.clamp( angle, vehicle.aseMinAngle, vehicle.aseMaxAngle )
 	
-	if border > 0 and AutoTractor.acDevFeatures then 
-		print("============================= "..tostring(border).." "..tostring(detected))
+	if border > 0 then
+		if AutoTractor.acDevFeatures then 
+			print("============================= "..tostring(border).." "..tostring(detected))
+		end
 		for _,tp in pairs(vehicle.aseToolParams) do
 			if tp.skip then
-				print(tostring(tp.i).." is skipped")
+				if AutoTractor.acDevFeatures then 
+					print(tostring(tp.i).." is skipped")
+				end
 			else
 				local b, t = AutoSteeringEngine.getChainBorder( vehicle, ASEGlobals.chainStart, indexMax, tp )
-				print(tostring(tp.i)..": "..tostring(b)..": "..tostring(t).." ("..tostring(vehicle.aseTools[tp.i].aiProhibitedFruitType)..")")
+				if AutoTractor.acDevFeatures then 
+					print(tostring(tp.i)..": "..tostring(b)..": "..tostring(t).." ("..tostring(vehicle.aseTools[tp.i].aiProhibitedFruitType)..")")
+				end
+				tp.noEmptyBorder = ( b > 0 )
 			end
 		end
 	end			
@@ -2047,8 +2054,7 @@ function AutoSteeringEngine.hasFruits( vehicle, widthFactor )
 						 or tool.isMower 
 						 or tool.isTedder   
 						 or tool.isWindrower ) then
-				AutoSteeringEngine.setToolsAreLowered( vehicle, false, true, tool.obj )
-				AutoSteeringEngine.setToolsAreLowered( vehicle, true, false, tool.obj )
+				AutoSteeringEngine.raiseToolNoFruits( vehicle, tool.obj )
 			end
 
 			AutoSteeringEngine.ensureToolIsLowered( vehicle, gotFruits, i )
@@ -2475,7 +2481,15 @@ function AutoSteeringEngine.drawMarker( vehicle )
 		--	drawDebugPoint( x,y+2,z	, 1, 1, 1, 1 )
 		--end
 			
-			if vehicle.acIamDetecting then
+			if not ( tp.skip ) and vehicle.acIamDetecting then
+				local c = { 0.5, 0.5, 0.5 }
+				if      tp.noEmptyBorder then
+					c = { 1, 0, 0 }
+				elseif  vehicle.aseFruitAreas ~= nil 
+						and vehicle.aseFruitAreas[j] ~= nil 
+						and vehicle.aseFruitAreas[j][9] then
+					c = { 0, 1, 0 }
+				end
 				local x, z = AutoSteeringEngine.getChainPoint( vehicle, 2, tp )
 				local wx,wy,wz = localToWorld( vehicle.aseChain.nodes[2].index ,x, 1, z )
 				x, z = AutoSteeringEngine.getChainPoint( vehicle, 3, tp )
@@ -2487,10 +2501,10 @@ function AutoSteeringEngine.drawMarker( vehicle )
 				wx,_,wz = localToWorld( vehicle.aseChain.refNode, tp.x, 0, tp.z )
 				wy = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, wx, 1, wz )
 				y2 = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x2, 1, z2 )
-				drawDebugLine(  wx,wy,wz, 1,0,0, wx,wy+1.2,wz, 1,0,0 )
-				drawDebugLine(  wx,wy+0.1,wz, 1,0,0, x2,y2+0.1,z2, 1,0,0 )
-				drawDebugLine(  wx,wy+0.2,wz, 1,0,0, x2,y2+0.2,z2, 1,0,0 )
-				drawDebugLine(  wx,wy+0.3,wz, 1,0,0, x2,y2+0.3,z2, 1,0,0 )
+				drawDebugLine(  wx,wy    ,wz, c[1],c[2],c[3], wx,wy+1.2,wz, c[1],c[2],c[3] )
+				drawDebugLine(  wx,wy+0.1,wz, c[1],c[2],c[3], x2,y2+0.1,z2, c[1],c[2],c[3] )
+				drawDebugLine(  wx,wy+0.2,wz, c[1],c[2],c[3], x2,y2+0.2,z2, c[1],c[2],c[3] )
+				drawDebugLine(  wx,wy+0.3,wz, c[1],c[2],c[3], x2,y2+0.3,z2, c[1],c[2],c[3] )
 				drawDebugPoint( wx,wy+1.2,wz	, 1, 1, 1, 1 )
 			end
 		end
@@ -3227,10 +3241,13 @@ end
 ------------------------------------------------------------------------
 -- invalidateField
 ------------------------------------------------------------------------
-function AutoSteeringEngine.invalidateField( vehicle )
+function AutoSteeringEngine.invalidateField( vehicle, force )
 	--if not ( vehicle.aseFieldIsInvalid ) then print("invalidating field") end
 	vehicle.aseFieldIsInvalid = true
 	vehicle.aseLastBestAngle  = nil
+	if force then
+		vehicle.aseCurrentField = nil		
+	end
 end
 
 ------------------------------------------------------------------------
@@ -3412,26 +3429,21 @@ function AutoSteeringEngine.checkField( vehicle, x, z )
 	if vehicle.aseFieldIsInvalid then
 		vehicle.aseChain.lastX = nil
 		vehicle.aseChain.lastZ = nil 
-	end
-	
-	--if vehicle.aseCurrentField ~= nil then
-	--	if vehicle.aseFieldIsInvalid then
-	--			local x1,_,z1 = localToWorld( vehicle.aseChain.refNode, 0.5 * ( vehicle.aseActiveX + vehicle.aseOtherX ), 0, 0 )
-	--		if vehicle.aseCurrentField.getBit( x1, z1 ) then
-	--			vehicle.aseFieldIsInvalid = false			
-	--		else
-	--			local checkFunction, areaTotalFunction = AutoSteeringEngine.getCheckFunction( vehicle )
-	--			if AutoSteeringEngine.checkFieldNoBuffer( x1, z1, checkFunction ) then
-	--				vehicle.aseCurrentField = nil			
-	--			end
-	--		end
-	--	end
-	--elseif vehicle.aseFieldIsInvalid then
-	if vehicle.aseFieldIsInvalid then
-		vehicle.aseCurrentField   = nil		
 		vehicle.aseCurrentFieldCo = nil
 		vehicle.aseCurrentFieldCS = 'dead'
 		vehicle.aseCurrentWorkArea = nil
+	
+		if vehicle.aseCurrentField ~= nil then
+			local x1,_,z1 = localToWorld( vehicle.aseChain.refNode, 0.5 * ( vehicle.aseActiveX + vehicle.aseOtherX ), 0, 0 )
+			if vehicle.aseCurrentField.getBit( x1, z1 ) then
+				vehicle.aseFieldIsInvalid = false			
+			else
+				local checkFunction, areaTotalFunction = AutoSteeringEngine.getCheckFunction( vehicle )
+				if AutoSteeringEngine.checkFieldNoBuffer( x1, z1, checkFunction ) then
+					vehicle.aseCurrentField = nil	
+				end
+			end
+		end
 	end
 	
 	if vehicle.aseCurrentField == nil then
@@ -6141,6 +6153,20 @@ function AutoSteeringEngine.checkToolIsReady( tool )
 		return true
 	end
 
+	if      tool.isPlough       
+			and tool.obj.ploughHasGroundContact then
+		return true
+	elseif  tool.isCultivator   
+			and tool.obj.cultivatorHasGroundContact then
+		return true
+	elseif  tool.isSowingMachine 
+			and tool.obj.sowingMachineHasGroundContact then
+		return true
+	elseif  tool.isSprayer      
+			and tool.obj:getIsReadyToSpray( ) then
+		return true
+	end
+	
 	if     tool.obj.movingDirection <= 0 
 			or tool.obj.lastSpeed       <= 8.3334e-4 then 
 		-- not moving => is ready to find some work to do...
@@ -6748,6 +6774,24 @@ function AutoSteeringEngine.setToolsAreLowered( vehicle, isLowered, immediate, o
 end
 
 ------------------------------------------------------------------------
+-- raiseToolNoFruits
+------------------------------------------------------------------------
+function AutoSteeringEngine.raiseToolNoFruits( vehicle, objectFilter )
+	if not ( vehicle.aseChain ~= nil and vehicle.aseLRSwitch ~= nil and vehicle.aseToolCount ~= nil and vehicle.aseToolCount >= 1 ) then
+		return
+	end
+	
+	for i=1,table.getn( vehicle.aseToolParams ) do
+		if  not vehicle.aseTools[vehicle.aseToolParams[i].i].isCombine
+				and vehicle.aseTools[vehicle.aseToolParams[i].i].obj == objectFilter then
+			vehicle.aseTools[vehicle.aseToolParams[i].i].lowerStateOnFruits = false
+			AutoSteeringEngine.ensureToolIsLowered( vehicle, false, i )
+			vehicle.aseTools[vehicle.aseToolParams[i].i].lowerStateOnFruits = true
+		end
+	end
+end
+
+------------------------------------------------------------------------
 -- setToolsAreLowered
 ------------------------------------------------------------------------
 function AutoSteeringEngine.setPloughTransport( vehicle, isTransport, excludePackomat )
@@ -6814,7 +6858,7 @@ function AutoSteeringEngine.ensureToolIsLowered( vehicle, isLowered, indexFilter
 			if AutoTractor.acDevFeatures then AutoTractor.printCallstack() end
 		
 			vehicle.aseTools[vehicle.aseToolParams[i].i].lowerStateOnFruits   = nil 
-			vehicle.aseTools[vehicle.aseToolParams[i].i].acWaitUntilIsLowered = g_currentMission.time + vehicle.acDeltaTimeoutRun
+			vehicle.aseTools[vehicle.aseToolParams[i].i].acWaitUntilIsLowered = g_currentMission.time + vehicle.acDeltaTimeoutStart -- vehicle.acDeltaTimeoutRun
 			for _,implement in pairs(vehicle.attachedImplements) do
 				if      implement.object == vehicle.aseTools[vehicle.aseToolParams[i].i].obj
 						and ( implement.object.needsLowering or implement.object.aiNeedsLowering )

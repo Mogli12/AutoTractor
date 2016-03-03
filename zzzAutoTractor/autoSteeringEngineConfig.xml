@@ -83,5 +83,5 @@
 		<enableYUTurn type="bool" value="false" />
 		<aiRescueDistSq type="float" value="900" />
 		<raiseNoFruits type="bool" value="false" />
-		<lowerAdvance type="float" value="1" />
+		<lowerAdvance type="float" value="2" />
 </ASEGlobals>

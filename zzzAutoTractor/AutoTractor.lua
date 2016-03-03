@@ -236,7 +236,7 @@ function AutoTractor:initMogliHud()
 
 	AutoTractorHud.addButton(self, "dds/auto_steer_off.dds", "dds/auto_steer_on.dds",AutoTractor.onAutoSteer,   AutoTractor.evalAutoSteer, 6,1, "AUTO_TRACTOR_STEER_ON", "AUTO_TRACTOR_STEER_OFF" );
 	AutoTractorHud.addButton(self, "dds/raise_impl.dds",     "dds/lower_impl.dds",   AutoTractor.onRaiseImpl,   AutoTractor.evalRaiseImpl, 6,2, "AUTO_TRACTOR_STEER_LOWER", "AUTO_TRACTOR_STEER_RAISE", nil, AutoTractor.getRaiseImplImage );
-	AutoTractorHud.addButton(self, "empty.dds",              "dds/refresh.dds",      AutoTractor.onMagic,       AutoTractor.evalAutoSteer, 6,3, nil, nil );
+	AutoTractorHud.addButton(self, "dds/refresh.dds",        nil,                    AutoTractor.onMagic,       nil,                       6,3, nil, nil );
 
 	
 	if type( self.atHud ) == "table" then
@@ -646,7 +646,7 @@ function AutoTractor:onAutoSteer(enabled)
 		end
 	elseif enabled then
 		AutoTractor.initMogliHud(self)
-		--self.setAIImplementsMoveDown(self,true);
+		AutoSteeringEngine.invalidateField( self )
 		self.acLastSteeringAngle = nil;
 		self.acTurnStage   = 198
 		self.acRotatedTime = 0
@@ -658,12 +658,10 @@ function AutoTractor:onAutoSteer(enabled)
 end
 
 function AutoTractor:onMagic(enabled)
-	if not self.isAITractorActivated and self.acTurnStage >= 198 then
-		AutoTractor.initMogliHud(self)
-		AutoSteeringEngine.invalidateField( self )		
-		AITractor.updateToolsInfo(self);
-		AutoTractor.processImplementsOfImplement(self,self,true)	
-	end
+	AutoTractor.initMogliHud(self)
+	AutoSteeringEngine.invalidateField( self, true )		
+	AITractor.updateToolsInfo(self);
+	AutoTractor.processImplementsOfImplement(self,self,true)	
 end
 
 function AutoTractor:onRaiseImpl(enabled)
