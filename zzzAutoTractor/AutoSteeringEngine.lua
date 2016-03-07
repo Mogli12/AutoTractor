@@ -29,6 +29,7 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.lookAhead    = 0
 	ASEGlobals.lookAheadFix = 0
 	ASEGlobals.widthDec     = 0
+	ASEGlobals.widthMaxDec  = 0
 	ASEGlobals.angleStep    = 0
 	ASEGlobals.angleStepDec = 0
 	ASEGlobals.angleFactorNoFix = 0
@@ -1359,6 +1360,8 @@ function AutoSteeringEngine.getWantedSpeed( vehicle, speedLevel )
 --	wantedSpeed = 18
 --elseif speedLevel == 3 then
 --	wantedSpeed = 30
+	elseif speedLevel == 5 then
+		wantedSpeed = 1
 	elseif speedLevel == 0 then
 		wantedSpeed = 0
 	elseif speedLevel == 1 then
@@ -1372,10 +1375,15 @@ end
 -- hasTools
 ------------------------------------------------------------------------
 function AutoSteeringEngine.hasTools( vehicle )
-	--if vehicle.aseChain == nil or vehicle.aseLRSwitch == nil or vehicle.aseToolCount == nil or vehicle.aseToolCount < 1 then -- vehicle.aseTools == nil or vehicle.aseToolCount < 1 then
-	--	return false
-	if ( vehicle.aseChain ~= nil and vehicle.aseLRSwitch ~= nil and vehicle.aseToolCount ~= nil and vehicle.aseToolCount >= 1 ) then 
-		return true 
+	if      vehicle.aseChain     ~= nil 
+			and vehicle.aseLRSwitch  ~= nil 
+			and vehicle.aseToolCount ~= nil 
+			and vehicle.aseToolCount >= 1 then 
+		for _,t in pairs(vehicle.aseTools) do
+			if not (t.ignoreAI) then
+				return true
+			end
+		end
 	end
 	return false 
 end
@@ -2592,7 +2600,12 @@ function AutoSteeringEngine.drawLines( vehicle )
 		drawDebugLine(  xw1, y, zw1, 1,0,1, xw1, y+2, zw1 ,1,1,1)
 		drawDebugPoint( xw1, y+2, zw1 , 0, 0, 1, 1 )		
 		
-		
+		if vehicle.aseDirectionBeforeTurn.ox ~= nil then
+			xw1 = vehicle.aseDirectionBeforeTurn.ox
+			zw1 = vehicle.aseDirectionBeforeTurn.oz
+			drawDebugLine(  xw1, y, zw1, 1,0,1, xw1, y+2, zw1 ,1,1,1)
+			drawDebugPoint( xw1, y+2, zw1 , 0, 0, 1, 1 )		
+		end
 	end		
 		
 	if vehicle.aseHeadland > 0 then		
@@ -3702,7 +3715,11 @@ function AutoSteeringEngine.getChainPoint( vehicle, i, tp )
 	local dtpx   = 0
 	
 	if i > 1 and ASEGlobals.widthDec ~= 0 then
-		dtpx = tp.width * ASEGlobals.widthDec * vehicle.aseChain.nodes[i].distance
+		local w = tp.width
+		if 0 < ASEGlobals.widthMaxDec and ASEGlobals.widthMaxDec < w then
+			w = ASEGlobals.widthMaxDec
+		end
+		dtpx = w * ASEGlobals.widthDec * vehicle.aseChain.nodes[i].distance
 	end
 --	if i > 1 and ASEGlobals.widthDec ~= 0 then
 --		dtpx = tp.width * ASEGlobals.widthDec * vehicle.aseChain.length * (i-1)/ASEGlobals.chainMax
@@ -4607,7 +4624,7 @@ function AutoSteeringEngine.saveDirection( vehicle, cumulate )
 
 	vehicle.aseDirectionBeforeTurn.a           = nil
 	vehicle.aseDirectionBeforeTurn.l           = nil
-	vehicle.aseDirectionBeforeTurn.xOffset     = nil
+	vehicle.aseDirectionBeforeTurn.isUTurn     = nil
 	vehicle.aseDirectionBeforeTurn.targetTrace = nil
 	
 	if not ( cumulate ) or vehicle.aseDirectionBeforeTurn.traceIndex == nil or vehicle.aseDirectionBeforeTurn.trace == nil then
@@ -4620,6 +4637,8 @@ function AutoSteeringEngine.saveDirection( vehicle, cumulate )
 		vehicle.aseDirectionBeforeTurn.uz          = nil
 		vehicle.aseDirectionBeforeTurn.cx          = nil
 		vehicle.aseDirectionBeforeTurn.cz          = nil
+		vehicle.aseDirectionBeforeTurn.ox          = nil
+		vehicle.aseDirectionBeforeTurn.oz          = nil
 	end
 
 	local wx,_,wz = localToWorld( vehicle.aseChain.refNode, vehicle.aseOtherX, 0 , vehicle.aseBack )
@@ -4645,7 +4664,19 @@ function AutoSteeringEngine.saveDirection( vehicle, cumulate )
 	local turnXc = vehicle.aseOtherX
 		
 	for _,tp in pairs(vehicle.aseToolParams) do	
-		local ox,_,oz = localToWorld( vehicle.aseChain.refNode, tp.xOther, 0 , tp.zReal )
+		local oxr,_,ozr = localToWorld( vehicle.aseChain.refNode, tp.xOther, 0 , tp.zReal )
+		
+		local ofs, idx
+		if vehicle.aseLRSwitch	then
+			ofs = tp.offset 
+			idx = tp.nodeRight
+		else
+			ofs = -tp.offset 
+			idx = tp.nodeLeft 
+		end
+		
+		local ox,_,oz = localToWorld( idx, ofs, 0, 1 )
+		
 		if      not ( tp.skipOther and tp.skip ) 
 				and ( saveTurnPoint == nil or saveTurnPoint == true )
 				and ( ( ( vehicle.aseHeadland >= 1
@@ -4683,25 +4714,30 @@ function AutoSteeringEngine.saveDirection( vehicle, cumulate )
 						
 			if stp then			
 				saveTurnPoint = true
+
+				vehicle.aseDirectionBeforeTurn.ox = ox
+				vehicle.aseDirectionBeforeTurn.oz = oz
+				local mx,_,mz = worldDirectionToLocal( vehicle.aseChain.refNode, ox - oxr, 0, oz - ozr )
+
 				if not ( tp.skipOther ) then
 					local txu = tp.xOther 				
 					if AutoSteeringEngine.invertsMarkerOnTurn( vehicle, vehicle.aseTools[tp.i], not vehicle.aseLRSwitch ) then
 						txu = -tp.x
 					end
-					txu = tp.xOther + txu 
+					txu = tp.xOther + txu + mx
 					
 					if     turnXu == nil then
 						turnXu = txu 
-						turnZu = vehicle.aseStart
+						turnZu = vehicle.aseStart + mz
 					elseif vehicle.aseLRSwitch then
 						if turnXu > txu then
 							turnXu = txu 
-							turnZu = vehicle.aseStart
+							turnZu = vehicle.aseStart + mz
 						end
 					else
 						if turnXu < txu then
 							turnXu = txu 
-							turnZu = vehicle.aseStart
+							turnZu = vehicle.aseStart + mz
 						end
 					end
 				end
@@ -4711,14 +4747,14 @@ function AutoSteeringEngine.saveDirection( vehicle, cumulate )
 					if vehicle.aseLRSwitch then
 						tzc = -tzc
 					end						
-					tzc = tzc + tp.zReal + 0.5
+					tzc = tzc + tp.zReal + mz
 					
 					if     turnZc == nil then
 						turnZc = tzc
-						turnXc = vehicle.aseOtherX
+						turnXc = vehicle.aseOtherX + mx
 					elseif turnZc < tzc then
 						turnZc = tzc
-						turnXc = vehicle.aseOtherX
+						turnXc = vehicle.aseOtherX + mx
 					end
 				end
 			end
@@ -4755,11 +4791,11 @@ function AutoSteeringEngine.saveDirection( vehicle, cumulate )
 		vector.px,_,vector.pz = AutoSteeringEngine.getAiWorldPosition( vehicle )
 		
 		local count = table.getn(vehicle.aseDirectionBeforeTurn.trace)
-		if count > 750 and vehicle.aseDirectionBeforeTurn.traceIndex == count then
+		if count > 100 and vehicle.aseDirectionBeforeTurn.traceIndex == count then
 			local x = vehicle.aseDirectionBeforeTurn.trace[vehicle.aseDirectionBeforeTurn.traceIndex].px - vehicle.aseDirectionBeforeTurn.trace[1].px
 			local z = vehicle.aseDirectionBeforeTurn.trace[vehicle.aseDirectionBeforeTurn.traceIndex].pz - vehicle.aseDirectionBeforeTurn.trace[1].pz		
 		
-			if x*x + z*z > 900 then 
+			if x*x + z*z > 400 then 
 				vehicle.aseDirectionBeforeTurn.traceIndex = 0
 			end
 		end
@@ -4812,13 +4848,10 @@ function AutoSteeringEngine.getTurnVector( vehicle, uTurn )
 	end
 
 	if uTurn == nil then
-		if      vehicle.aseDirectionBeforeTurn.xOffset == nil 
-				and vehicle.aseDirectionBeforeTurn.isUTurn == nil then
+		if vehicle.aseDirectionBeforeTurn.isUTurn == nil then
 			return 0,0
 		end
 		uTurn = vehicle.aseDirectionBeforeTurn.isUTurn
-	--else
-	--	AutoSteeringEngine.initTurnVector( vehicle, uTurn )
 	end
 	
 	setRotation( vehicle.aseChain.headlandNode, 0, -AutoSteeringEngine.getTurnAngle( vehicle ), 0 )
@@ -4833,11 +4866,6 @@ function AutoSteeringEngine.getTurnVector( vehicle, uTurn )
 		wx = vehicle.aseDirectionBeforeTurn.cx
 		wz = vehicle.aseDirectionBeforeTurn.cz 
 	end
-	
-	if vehicle.aseDirectionBeforeTurn.xOffsetW ~= nil then
-		wx = wx + vehicle.aseDirectionBeforeTurn.xOffsetW
-		wz = wz + vehicle.aseDirectionBeforeTurn.zOffsetW
-  end
 	
 	local x,y,z = worldToLocal( vehicle.aseChain.headlandNode, wx , wy, wz )
 	
@@ -4862,87 +4890,19 @@ end
 ------------------------------------------------------------------------
 function AutoSteeringEngine.initTurnVector( vehicle, uTurn )
 	
-	if     vehicle.aseChain.refNode          == nil
-			or vehicle.aseDirectionBeforeTurn    == nil
+	if     vehicle.aseChain.refNode         == nil
+			or vehicle.aseDirectionBeforeTurn   == nil
 			or vehicle.aseDirectionBeforeTurn.x == nil
 			or vehicle.aseDirectionBeforeTurn.z == nil then
 		return
 	end
 	
-	if vehicle.aseDirectionBeforeTurn.xOffset ~= nil then
+	if vehicle.aseDirectionBeforeTurn.isUTurn ~= nil then
 		return
 	end
 	
-	if uTurn ~= nil then
-		vehicle.aseDirectionBeforeTurn.isUTurn = uTurn
-	end
-
-	local isUTurn       = Utils.getNoNil( vehicle.aseDirectionBeforeTurn.isUTurn, true )
-	local offsetOutside = -1
-	
-	if vehicle.aseLRSwitch	then
-		offsetOutside = 1
-	end
-	if isUTurn then
-		offsetOutside = -offsetOutside
-	end		
-		
-	AutoSteeringEngine.rotateHeadlandNode( vehicle )
-	
-	if vehicle.aseDirectionBeforeTurn.a == nil then return end
-		
-	vehicle.aseDirectionBeforeTurn.xOffset  = 0
-	vehicle.aseDirectionBeforeTurn.zOffset  = 0
-	vehicle.aseDirectionBeforeTurn.xOffsetW = 0
-	vehicle.aseDirectionBeforeTurn.zOffsetW = 0
-		
-	if false and vehicle.aseTools ~= nil and vehicle.aseToolCount > 0 then	
-		local dxz, _,dzz  = localDirectionToWorld( vehicle.aseChain.headlandNode, 0, 0, 1 )
-		local dxx, _,dzx  = localDirectionToWorld( vehicle.aseChain.headlandNode, 1, 0, 0 )			
-		local xw0,zw0,xw1,zw1,xw2,zw2 
-		local dist = 3 
-		if isUTurn then
-			dist  = ASEGlobals.ignoreDist + 3
-		end
-		dist    = Utils.clamp( AutoSteeringEngine.getTraceLength( vehicle ), dist, ASEGlobals.maxTurnCheck )
-		local f = 0
-
-		xw0 = vehicle.aseDirectionBeforeTurn.x
-		zw0 = vehicle.aseDirectionBeforeTurn.z
-		
-		f = -0.1
-		for i=0,30 do 
-			vehicle.aseDirectionBeforeTurn.x = xw0 +f*i*dxz
-			vehicle.aseDirectionBeforeTurn.z = zw0 +f*i*dzz
-			vehicle.aseDirectionBeforeTurn.zOffset = f*i
-
-			if AutoSteeringEngine.isChainPointOnField( vehicle, vehicle.aseDirectionBeforeTurn.x, vehicle.aseDirectionBeforeTurn.z ) then
-				break
-			end
-		end
-		
-		xw0 = vehicle.aseDirectionBeforeTurn.x
-		zw0 = vehicle.aseDirectionBeforeTurn.z
-		
-		f  = offsetOutside * 0.1
-		for i = -30,30 do
-			vehicle.aseDirectionBeforeTurn.x = xw0 +f*i*dxx
-		  vehicle.aseDirectionBeforeTurn.z = zw0 +f*i*dzx
-			vehicle.aseDirectionBeforeTurn.xOffset = f*i
-			
-			xw1 = vehicle.aseDirectionBeforeTurn.x - dist * dxz
-			zw1 = vehicle.aseDirectionBeforeTurn.z - dist * dzz
-			xw2 = vehicle.aseDirectionBeforeTurn.x - ASEGlobals.ignoreDist * dxz
-			zw2 = vehicle.aseDirectionBeforeTurn.z - ASEGlobals.ignoreDist * dzz
-			
-			if not AutoSteeringEngine.hasFruitsSimple( vehicle, xw1, zw1, xw2, zw2, offsetOutside ) then
-				break
-			end
-		end	
-		
-		vehicle.aseDirectionBeforeTurn.xOffsetW = vehicle.aseDirectionBeforeTurn.xOffset *dxx + vehicle.aseDirectionBeforeTurn.zOffset *dxz
-		vehicle.aseDirectionBeforeTurn.zOffsetW = vehicle.aseDirectionBeforeTurn.xOffset *dzx + vehicle.aseDirectionBeforeTurn.zOffset *dzz
-	end	
+	vehicle.aseDirectionBeforeTurn.isUTurn = uTurn
+	AutoSteeringEngine.rotateHeadlandNode( vehicle )	
 end	
 
 ------------------------------------------------------------------------
@@ -5378,7 +5338,6 @@ function AutoSteeringEngine.addTool( vehicle, implement, object, reference )
 	tool.aiProhibitedFruitType         = Utils.getNoNil( object.aiProhibitedFruitType        ,FruitUtil.FRUITTYPE_UNKNOWN )
 	tool.aiProhibitedMinGrowthState    = Utils.getNoNil( object.aiProhibitedMinGrowthState   ,0 )
 	tool.aiProhibitedMaxGrowthState    = Utils.getNoNil( object.aiProhibitedMaxGrowthState   ,0 )
-	tool.aiForceTurnNoBackward         = Utils.getNoNil( object.aiForceTurnNoBackward        ,false )
 	tool.b1                            = 0
 	tool.b2                            = 0
 	tool.b3                            = 0
@@ -5390,7 +5349,17 @@ function AutoSteeringEngine.addTool( vehicle, implement, object, reference )
 	
 	if tool.checkZRotation then
 		tool.aiForceTurnNoBackward = true
+	elseif  object.aiForceTurnNoBackward then
+		tool.aiForceTurnNoBackward = true
+	elseif  object.attacherJoint              ~= nil
+			and object.attacherJoint.jointType    ~= nil
+			and ( object.attacherJoint.jointType  == Vehicle.JOINTTYPE_TRAILERLOW
+			   or object.attacherJoint.jointType  == Vehicle.JOINTTYPE_TRAILER ) then
+		tool.aiForceTurnNoBackward = true
+	elseif object.aiForceTurnNoBackward == nil then
+		tool.aiForceTurnNoBackward = false
 	end
+	
 	
 	local useAI = true
 	tool.isCombine       = SpecializationUtil.hasSpecialization(Combine, object.specializations)
@@ -5409,7 +5378,6 @@ function AutoSteeringEngine.addTool( vehicle, implement, object, reference )
 			and SpecializationUtil.hasSpecialization(SpecializationUtil.getSpecialization( object.customEnvironment ..".HorschSW3500S" ), object.specializations) then 
 		useAI = false
   end
-	
 	if tool.isPlough and tool.aiForceTurnNoBackward then
 		tool.checkZRotation = true
 	end
@@ -5419,11 +5387,6 @@ function AutoSteeringEngine.addTool( vehicle, implement, object, reference )
 		tool.b1 = 0
 		tool.b2 = -6
 		tool.b3 = -4
---elseif object.configFileName == "data/vehicles/tools/horsch/horschMaestro12SW.xml" then
---	tool.doubleJoint = true
---	tool.b1 = 0
---	tool.b2 = -6
---	tool.b3 = -4
 	end
 	
 	tool.ploughTransport = false
@@ -5483,17 +5446,7 @@ function AutoSteeringEngine.addTool( vehicle, implement, object, reference )
 		end
 		
 	else
-		local areas = nil
-
-		if      object.attacherJoint              ~= nil
-				and object.attacherJoint.jointType    ~= nil
-				and ( object.attacherJoint.jointType  == Vehicle.JOINTTYPE_TRAILERLOW
-				   or object.attacherJoint.jointType  == Vehicle.JOINTTYPE_TRAILER ) then
-			tool.aiForceTurnNoBackward = true
-		elseif object.aiForceTurnNoBackward == nil then
-			tool.aiForceTurnNoBackward = false
-		end
-	
+		local areas = nil	
 		if     SpecializationUtil.hasSpecialization(Sprayer, object.specializations) then
 		-- sprayer	
 			if AtResetCounter == nil or AtResetCounter < 1 then
@@ -5858,6 +5811,10 @@ elseif not ( AutoTractor.acDevFeatures ) then
 		i = table.getn(vehicle.aseTools) + 1
 	end
 	
+	if tool.isSprayer and getfenv(0)["modSoilMod2"] ~= nil then
+		tool.ignoreAI = true
+	end
+	
 	if not ( tool.ignoreAI ) then
 		if tool.isCombine       then vehicle.aseHas.combine       = true end
 		if tool.isPlough        then vehicle.aseHas.plough        = true end
@@ -6067,10 +6024,12 @@ end
 -- checkIsAnimPlaying
 ------------------------------------------------------------------------
 function AutoSteeringEngine.checkIsAnimPlaying( vehicle, moveDown )
+	
+	local isPlaying = false
 
 	if vehicle.aseTools == nil or table.getn(vehicle.aseTools) < 1 then
 		if AutoTractor.acDevFeatures then print("no tools") end
-		return false
+		return false, false
 	end
 	
 	for _,tool in pairs(vehicle.aseTools) do
@@ -6083,7 +6042,7 @@ function AutoSteeringEngine.checkIsAnimPlaying( vehicle, moveDown )
         --local turnAnimTime = self:getAnimationTime(self.rotationPart.turnAnimation)
         --if turnAnimTime < self.rotationPart.touchAnimMaxLimit and turnAnimTime > self.rotationPart.touchAnimMinLimit then
 				if self:getIsAnimationPlaying(self.rotationPart.turnAnimation) then
-          return true
+          return true, true
         end
 			end
 			if  self.rotationPart.node ~= nil then
@@ -6092,11 +6051,11 @@ function AutoSteeringEngine.checkIsAnimPlaying( vehicle, moveDown )
 				local minRot = self.rotationPart.minRot
 				local eps = self.rotationPart.touchRotLimit
 				if eps < math.abs(x - maxRot[1]) and eps < math.abs(x - minRot[1]) or eps < math.abs(y - maxRot[2]) and eps < math.abs(y - minRot[2]) or eps < math.abs(z - maxRot[3]) and eps < math.abs(z - minRot[3]) then
-					return true
+					return true, true
 				end
 			end
       if self.foldAnimTime ~= nil and (self.foldAnimTime > self.rotationPart.foldMaxLimit or self.foldAnimTime < self.rotationPart.foldMinLimit) then
-				return true
+				return true, true
       end
  		end
 		
@@ -6107,16 +6066,20 @@ function AutoSteeringEngine.checkIsAnimPlaying( vehicle, moveDown )
 				tool.obj:setIsTurnedOn( true )
 			end
 			
-			local isReady = AutoSteeringEngine.checkToolIsReady( tool ) 
+			local isReady, noSneak = AutoSteeringEngine.checkToolIsReady( tool ) 
 			
-			if isReady == false then 
+			if isReady == false and noSneak then
 				if AutoTractor.acDevFeatures then print("tool is not yet ready I") end
-				return true
+				if tool.ignoreAI then
+					isPlaying = true
+				else
+					return true, true
+				end
 			elseif  isReady                   == nil 
 					and tool.acWaitUntilIsLowered ~= nil 
 					and tool.acWaitUntilIsLowered > g_currentMission.time then
 				if AutoTractor.acDevFeatures then print("tool is not yet ready II") end
-				return true				
+				isPlaying = true
 			end
 		end
 		--if moveDown and tool.isFoldable then
@@ -6133,19 +6096,20 @@ function AutoSteeringEngine.checkIsAnimPlaying( vehicle, moveDown )
 		--end
 	end
 	
-	return false
+	return isPlaying, false
 end
 
 ------------------------------------------------------------------------
 -- checkToolIsReady
 ------------------------------------------------------------------------
 function AutoSteeringEngine.checkToolIsReady( tool )
-	local result = nil
-
+	local result   = nil
+	local noSneak  = false
+	
 	if      tool.isTurnOnVehicle
 			and tool.obj:getCanBeTurnedOn( )
 			and not tool.obj:getIsTurnedOn( ) then
-		return false
+		return false, true
 	end
 	
 	if      tool.obj.getDoGroundManipulation ~= nil
@@ -6167,20 +6131,24 @@ function AutoSteeringEngine.checkToolIsReady( tool )
 		return true
 	end
 	
-	if     tool.obj.movingDirection <= 0 
-			or tool.obj.lastSpeed       <= 8.3334e-4 then 
-		-- not moving => is ready to find some work to do...
-		return true
-	end
+--if     tool.obj.movingDirection <= 0 
+--		or tool.obj.lastSpeed       <= 8.3334e-4 then 
+--	-- not moving => is ready to find some work to do...
+--	return true, true
+--end
 	
 	if     tool.isPlough        then
-		result = tool.obj.ploughHasGroundContact
+		result  = tool.obj.ploughHasGroundContact
+		noSneak = true
 	elseif tool.isCultivator    then
-		result = tool.obj.cultivatorHasGroundContact
+		result  = tool.obj.cultivatorHasGroundContact
+		noSneak = true
 	elseif tool.isSowingMachine then
-		result = tool.obj.sowingMachineHasGroundContact
+		result  = tool.obj.sowingMachineHasGroundContact
+		noSneak = true
 	elseif tool.isSprayer       then
-		result = tool.obj:getIsReadyToSpray( )
+		result  = tool.obj:getIsReadyToSpray( )
+		noSneak = true
 	elseif tool.hasWorkAreas and tool.obj.groundReferenceNodes ~= nil then
 		result = nil
 		for _,n in pairs(tool.obj.groundReferenceNodes) do
@@ -6189,7 +6157,8 @@ function AutoSteeringEngine.checkToolIsReady( tool )
 				local terrainHeight = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 0, z)
 				y = y - terrainHeight
 				if y > n.threshold then			
-					result = false
+					result  = false
+					noSneak = true
 				elseif result == nil then
 					result = true
 				end
@@ -6206,7 +6175,12 @@ function AutoSteeringEngine.checkToolIsReady( tool )
 		result = tool.obj.isThreshing
 	end
 
-	return result
+	if     result then 
+		return true
+	elseif result == nil then
+		return nil, false
+	end
+	return result, noSneak
 end
 
 ------------------------------------------------------------------------
@@ -6236,9 +6210,6 @@ function AutoSteeringEngine.getMaxSteeringAngle75( vehicle, invert )
 		local gammaE  = 0
 		
 		if index > 0 then
-			local tan75Inv = 1 / math.tan( ASEGlobals.maxToolAngle )
-			local sin75Inv = 1 / math.sin( ASEGlobals.maxToolAngle )
-			
 			local tool    = vehicle.aseTools[index]
 			local r       = vehicle.aseChain.radius
 			local _,_,b1  = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.refNode, tool.refNode )
@@ -6257,11 +6228,33 @@ function AutoSteeringEngine.getMaxSteeringAngle75( vehicle, invert )
 				b2 = b2 + 0.5
 				b1 = b1 - 0.5
 			end
-						
+
 			if vehicle.articulatedAxis == nil then
-				radius = math.max( r, tan75Inv * b1 + sin75Inv * b2 )
+				local diff   = math.huge
+				local alpha1 = 0
+				local alpha2 = ASEGlobals.maxToolAngle
+				for f=0,1,0.01 do
+					local a1 = f     * ASEGlobals.maxToolAngle
+					local a2 = (1-f) * ASEGlobals.maxToolAngle
+					local d  = math.abs( b1 * math.sin( a2 ) - b1 * math.sin( a1 ) )
+					if diff > d then
+						diff   = d
+						alpha1 = a1
+						alpha2 = a2
+					end
+				end
+				
+				local ra
+				if b1 > b2 then
+					ra = b1 / math.sin( alpha1 )
+				else
+					ra = b2 / math.sin( alpha2 )
+				end
+				
+				radius = math.max( r, ra * math.cos( alpha1 ) )
 				alpha  = math.min( vehicle.aseChain.maxSteering, math.atan( vehicle.aseChain.wheelBase / radius ) )
 			end
+			
 			radiusT  = math.sqrt( math.max( radius*radius + b1*b1 - b2*b2 - b3*b3, 0 ) )
 			radiusE  = r
 			diffE    = 0.5 * math.max( 0, radiusE - radiusT )
@@ -6375,9 +6368,20 @@ function AutoSteeringEngine.navigateToSavePoint( vehicle, uTurn, fallback, turn7
 		else
 			if      type( turn75 ) == "table"
 					and turn75.radiusT ~= nil
-					and turn75.radius  ~= nil
+					and turn75.radius  ~= nil 
 					and turn75.radiusT < turn75.radius then
+				-- negative because getTurnVector inverts the sign
 				xO,_,zO = localDirectionToWorld( vehicle.aseChain.headlandNode, 0, 0, turn75.radius - turn75.radiusT )
+				if AutoTractor.acDevFeatures then
+					print( "offset: "..tostring(turn75.radius - turn75.radiusT).." => ("..tostring(xO)..", "..tostring(zO)..")") 
+				end
+			else
+				if AutoTractor.acDevFeatures then
+					print( "navigateToSavePoint: "..type( turn75 ))
+					if type( turn75 ) == "table" then
+						print(tostring(turn75.radiusT).." / "..tostring(turn75.radius))
+					end
+				end
 			end
 
 			local dx,dz
@@ -6391,14 +6395,8 @@ function AutoSteeringEngine.navigateToSavePoint( vehicle, uTurn, fallback, turn7
 			local zl = vehicle.aseDirectionBeforeTurn.targetTraceMinZ - 1
 			
 			while zl < 0 do
-				local x,_,z = localDirectionToWorld( vehicle.aseChain.headlandNode, zl, 0, 0 )
-				if vehicle.aseLRSwitch then
-					x = vehicle.aseDirectionBeforeTurn.cx + x + xO
-					z = vehicle.aseDirectionBeforeTurn.cz + z + zO
-				else
-					x = vehicle.aseDirectionBeforeTurn.cx - x + xO
-					z = vehicle.aseDirectionBeforeTurn.cz - z + zO
-				end
+				x = vehicle.aseDirectionBeforeTurn.cx + zl * dx + xO
+				z = vehicle.aseDirectionBeforeTurn.cz + zl * dz + zO
 				table.insert( vehicle.aseDirectionBeforeTurn.targetTrace, { x=x, z=z, dx=dx, dz=dz } )
 				zl = zl + 1
 			end			
@@ -6855,7 +6853,7 @@ function AutoSteeringEngine.ensureToolIsLowered( vehicle, isLowered, indexFilter
 			end
 		end
 		if doit then
-			if AutoTractor.acDevFeatures then AutoTractor.printCallstack() end
+		--if AutoTractor.acDevFeatures then AutoTractor.printCallstack() end
 		
 			vehicle.aseTools[vehicle.aseToolParams[i].i].lowerStateOnFruits   = nil 
 			vehicle.aseTools[vehicle.aseToolParams[i].i].acWaitUntilIsLowered = g_currentMission.time + vehicle.acDeltaTimeoutStart -- vehicle.acDeltaTimeoutRun
@@ -6954,7 +6952,7 @@ function AutoSteeringEngine.getWorldYRotation(node)
 	if math.abs(x) < 1e-3 and math.abs(z) < 1e-3 then
 		return 0
 	end
-	return AutoSteeringEngine.normalizeAngle( math.atan2(z,x) + trailerAssistGlobals.mathPi2 )
+	return AutoSteeringEngine.normalizeAngle( math.atan2(z,x) + 1.5707963268 )
 end
 
 --***************************************************************

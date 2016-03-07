@@ -59,6 +59,7 @@
     <stepLog2 value="2" />
     <!--widthDec type="float" value="0.0050000" /-->
     <widthDec type="float" value="0.006" />
+    <widthMaxDec type="float" value="3" />
     <yieldCount value="300" />
 		<zeroAngle type="bool" value="true" />
 		<getIsHired type="bool" value="true" />
@@ -79,7 +80,7 @@
 		<maxTurnCheck type="float" value="6"/>		
 		<maxToolAngle type="degree" value="60" />
 		<maxToolAngle2 type="degree" value="30" />
-		<maxToolAngleF type="float" value="0.375" />
+		<maxToolAngleF type="float" value="0.2" />
 		<enableYUTurn type="bool" value="false" />
 		<aiRescueDistSq type="float" value="900" />
 		<raiseNoFruits type="bool" value="false" />

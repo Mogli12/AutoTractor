@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no" ?>
 <modDesc descVersion="23">
 	<author>Mogli</author>
-	<version>2.1.0.0</version>
+	<version>2.1.0.1</version>
 	<title>
 		<en>Auto Tractor</en>
 		<de>Auto Traktor</de>
@@ -37,8 +37,8 @@
 
 	<l10n filenamePrefix="modDesc_l10n">
 		<text name="AUTO_TRACTOR_VERSION">
-			<en>AutoTractor v2.1 rc1</en>
-			<de>AutoTractor v2.1 rc1</de>
+			<en>AutoTractor v2.1 rc2</en>
+			<de>AutoTractor v2.1 rc2</de>
 		</text>
 	</l10n>
 </modDesc>
