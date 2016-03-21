@@ -36,6 +36,17 @@ function AutoTractor:statEvent( name, dt )
 		self.acStat[name].n = self.acStat[name].n + 1
 	end
 end
+------------------------------------------------------------------------
+-- debugPrint
+------------------------------------------------------------------------
+function AutoTractor:debugPrint( ... )
+	if ASEGlobals.devFeatures > 0 then
+		print( ... )
+	end
+	if ASEGlobals.showInfo > 0 and self.atMogliInitDone then
+		self.atHud.InfoText = tostring( ... )
+	end	
+end
 
 AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",     tp = "B", default = true, always = true },
 																			upNDown         = { xml = "acUTurn",       tp = "B", default = true, always = true },
@@ -49,7 +60,8 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			turnModeIndex   = { xml = "acTurnMode",    tp = "I", default = 1 },
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
-																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.45 },
+																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.4 },
+																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = 0.7 },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
@@ -80,7 +92,11 @@ AutoTractor.turnStageEnd  = { { 4, -1 },
 															{ 78, 79 },
 															{ 79, -2 },
 															{ 83, 85 },
-															{ 86, -2 }}
+															{ 86, -2 },
+															{ 96, -1 },
+															{103, -1 },
+															{108, -1 },
+															{114, -2 }}
 
 ------------------------------------------------------------------------
 -- AICombine:updateAIMovement
@@ -114,6 +130,7 @@ function AutoTractor:load(xmlFile)
 	self.acParameters         = AutoTractor.getParameterDefaults( )
 	self.acAxisSide           = 0
 	self.acSentSpeedFactor    = 0.8
+	self.acDebugPrint         = AutoTractor.debugPrint
 	
 	self.acDeltaTimeoutWait   = math.max(Utils.getNoNil( self.waitForTurnTimeout, 1600 ), 1000 ); 
 	self.acDeltaTimeoutRun    = math.max(Utils.getNoNil( self.turnTimeout, 800 ), 500 );
@@ -196,14 +213,14 @@ function AutoTractor:initMogliHud()
 	
 	local mogliRows = 4
 	local mogliCols = 6
-	if AutoTractor.acDevFeatures then
+	if ASEGlobals.devFeatures > 0 then
 		mogliCols = mogliCols + 1
 	end
 	--(                        directory,   hudName, hudBackground, onTextID, offTextID, showHudKey, x,y, nx, ny, w, h, cbOnClick )
 	AutoTractorHud.init( self, AtDirectory, "AutoTractorHud", 0.4, "AUTO_TRACTOR_TEXTHELPPANELON", "AUTO_TRACTOR_TEXTHELPPANELOFF", InputBinding.AUTO_TRACTOR_HELPPANEL, 0.395, 0.0108, mogliCols, mogliRows, AutoTractor.sendParameters )--, nil, nil, 0.8 )
 	AutoTractorHud.setTitle( self, "AUTO_TRACTOR_VERSION" )
 	
-	if AutoTractor.acDevFeatures then
+	if ASEGlobals.devFeatures > 0 then
 		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test3, nil, mogliCols,1, "Trace" );
 		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test1, nil, mogliCols,2, "Turn Outside");
 		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test2, nil, mogliCols,3, "Turn Inside" );
@@ -515,11 +532,18 @@ function AutoTractor:getTurnOffset(old)
 	return new
 end
 
+function AutoTractor:getAngleFactorComp()
+	if self.acParameters ~= nil and	not ( self.acParameters.upNDown ) then
+		return "angleFactorC"
+	end
+	return "angleFactor"
+end
+
 function AutoTractor:evalAngleUp()
 	if not self.acParameters.enabled then 
 		return true 
 	end 
-	local enabled = self.acParameters.angleFactor <= 0.95;
+	local enabled = self.acParameters[AutoTractor.getAngleFactorComp(self)] <= 0.95;
 	return enabled
 end
 
@@ -527,16 +551,18 @@ function AutoTractor:evalAngleDown()
 	if not self.acParameters.enabled then 
 		return true 
 	end 
-	local enabled = self.acParameters.angleFactor >= 0.1;
+	local enabled = self.acParameters[AutoTractor.getAngleFactorComp(self)] >= 0.1;
 	return enabled
 end
 
 function AutoTractor:setAngleUp(enabled)
-	if enabled then self.acParameters.angleFactor = self.acParameters.angleFactor + 0.05 end
+	local c = AutoTractor.getAngleFactorComp(self)
+	if enabled then self.acParameters[c] = self.acParameters[c] + 0.05 end
 end
 
 function AutoTractor:setAngleDown(enabled)
-	if enabled then self.acParameters.angleFactor = self.acParameters.angleFactor - 0.05 end
+	local c = AutoTractor.getAngleFactorComp(self)
+	if enabled then self.acParameters[c] = self.acParameters[c] - 0.05 end
 end
 
 function AutoTractor:getMaxLookingAngleValue( noScale )
@@ -546,9 +572,9 @@ function AutoTractor:getMaxLookingAngleValue( noScale )
 	
 	local ml = Utils.getNoNil( self.acDimensions.maxSteeringAngle, ASEGlobals.maxLooking )
 	
-	if      self.acParameters                  ~= nil
-			and self.acParameters.angleFactor      ~= nil then
-		ml  = math.max( ml * self.acParameters.angleFactor, 0.0174533 )
+	if      self.acParameters                                       ~= nil
+			and self.acParameters[AutoTractor.getAngleFactorComp(self)] ~= nil then
+		ml  = math.max( ml * self.acParameters[AutoTractor.getAngleFactorComp(self)], 0.0174533 )
 	end
 	
 	return ml
@@ -731,7 +757,7 @@ function AutoTractor:getTurnModeImage()
 		img = "dds/bigSide7.dds"
 	end
 
-	if AutoTractor.acDevFeatures then
+	if ASEGlobals.devFeatures > 0 then
 		if self.acLastBigImg == nil or self.acLastBigImg ~= img then
 			self.acLastBigImg = img
 			print(img)
@@ -811,6 +837,7 @@ function AutoTractor:update(dt)
 			and self.acDimensions.wheelBase ~= nil then	
 		if     ASEGlobals.artAxisMode == 1 or ASEGlobals.artAxisMode == 3 then			
 			local _,angle,_ = getRotation( self.articulatedAxis.componentJoint.jointNode );
+			angle = 0.5 * angle
 			setRotation( self.acRefNode, 0, ASEGlobals.artAxisRot * angle, 0 )
 			setTranslation( self.acRefNode, ASEGlobals.artAxisShift * self.acDimensions.wheelBase * math.sin( angle ), 0, 0 )
 		elseif ASEGlobals.artAxisMode == 4 then			
@@ -825,6 +852,23 @@ function AutoTractor:update(dt)
 			if not linked then
 				link( self.articulatedAxis.componentJoint.jointNode, self.acRefNode )
 			end			
+		elseif ASEGlobals.artAxisMode == 5 then
+			local node = getParent( self.acRefNode )
+			local dx = 0
+			local dz = 0
+			local dn = 0
+			for n,i in pairs( self.acDimensions.wheelParents ) do
+				local x,_,z  =AutoSteeringEngine.getRelativeTranslation( node, n )
+				dx = dx + x
+				dz = dz + z
+				dn = dn + i
+			end
+			dx = dx / dn
+			dz = dz / dn
+			local _,angle,_ = getRotation( self.articulatedAxis.componentJoint.jointNode );
+			angle = 0.5 * angle
+			setRotation( self.acRefNode, 0, ASEGlobals.artAxisRot * angle, 0 )
+			setTranslation( self.acRefNode, ASEGlobals.artAxisShift * dx, 0, ASEGlobals.artAxisShift * dz )			
 		end			
 	end
 
@@ -945,17 +989,7 @@ function AutoTractor:update(dt)
 				end
 			end
 		end
-	end
-	
-	if not AutoTractor.acDevFeatures then
-		AutoTractorHud.setInfoText( self )
-		if self.acDimensions ~= nil and self.acDimensions.distance ~= nil then
-			AutoTractorHud.setInfoText( self, AutoTractorHud.getText( "AUTO_TRACTOR_WORKWIDTH" ) .. string.format(" %0.2fm", self.acDimensions.distance+self.acDimensions.distance) )
-		end
-		if self.acTurnStage ~= nil and self.acTurnStage ~= 0 and self.acTurnStage < 197 then
-			AutoTractorHud.setInfoText( self, AutoTractorHud.getInfoText(self) .. string.format(" (%i)", self.acTurnStage) )
-		end
-	end
+	end	
 end
 
 ------------------------------------------------------------------------
@@ -1000,7 +1034,7 @@ function AutoTractor:updateTick( dt )
 				and getParent( self.acRefNode ) ~= self.aiTractorDirectionNode then				
 			link( self.aiTractorDirectionNode, self.acRefNode )
 			self.acDimensions = nil
-			AutoSteeringEngine.checkTools( self, true )
+			AutoSteeringEngine.checkTools1( self, true )
 		end
 		
 		local inverted = self.acParameters.inverted
@@ -1015,7 +1049,7 @@ function AutoTractor:updateTick( dt )
 				setRotation( self.acRefNode, 0, 0, 0 )
 			end
 			self.acDimensions = nil
-			AutoSteeringEngine.checkTools( self, true )
+			AutoSteeringEngine.checkTools1( self, true )
 		end
 		
 		if not ( ( self.isAITractorActivated and self.acParameters.enabled )
@@ -1078,9 +1112,22 @@ function AutoTractor:updateTick( dt )
 					self.acAiNextDtIsAfter = true
 					self.acAiPos = { wx, wy, wz }
 					AutoTractor.statEvent( self, "updateAIMovement", self.acDtSum )
+					
+					if ASEGlobals.devFeatures <= 0 then
+						AutoTractorHud.setInfoText( self )
+						if self.acDimensions ~= nil and self.acDimensions.distance ~= nil then
+							AutoTractorHud.setInfoText( self, AutoTractorHud.getText( "AUTO_TRACTOR_WORKWIDTH" ) .. string.format(" %0.2fm", self.acDimensions.distance+self.acDimensions.distance) )
+						end
+						if self.acTurnStage ~= nil and self.acTurnStage ~= 0 and self.acTurnStage < 197 then
+							AutoTractorHud.setInfoText( self, AutoTractorHud.getInfoText(self) .. string.format(" (%i)", self.acTurnStage) )
+						end
+					end
+					
 					AITractor.updateAIMovement(	self, self.acDtSum )
-					self.acDtSum = 0
+					self.acDtSum = Utils.clamp( self.acDtSum - ASEGlobals.maxDtSum, 0, ASEGlobals.maxDtSum )
 				else
+					AutoSteeringEngine.steerContinued( self )
+					AutoSteeringEngine.driveContinued( self )
 					self.acIamDetecting = lastIamDetecting
 				end
 			else
@@ -1146,7 +1193,7 @@ function AutoTractor:newUpdateToolsInfo( superFunc, ... )
 	superFunc( self, ... )
 	
 	if self.acParameters ~= nil and self.acParameters.enabled then 
-		AutoSteeringEngine.checkTools( self, true )
+		AutoSteeringEngine.checkTools1( self, true )
 	end
 end
 
@@ -1328,7 +1375,7 @@ end
 ------------------------------------------------------------------------
 --local showOnce17 = true
 function AutoTractor:newStopAITractor( superFunc, noEventSend, ... )
---if AutoTractor.acDevFeatures then AutoTractorHud.printCallstack() end
+--if ASEGlobals.devFeatures > 0 then AutoTractorHud.printCallstack() end
 	
 	if self == nil or superFunc == nil or type(superFunc) ~= "function" then
 		--if showOnce17 == true then
@@ -1480,7 +1527,7 @@ function AutoTractor:newCanStartAITractor( superFunc, ...  )
 			return false;
 		end;
 		
-		--if AutoTractor.acDevFeatures then
+		--if ASEGlobals.devFeatures > 0 then
 			return true;
 		--end
 	end
@@ -1503,7 +1550,7 @@ function AutoTractor:newGetIsAITractorAllowed( superFunc, ...  )
 			return false;
 		end;
 		
-		--if AutoTractor.acDevFeatures then
+		--if ASEGlobals.devFeatures > 0 then
 			return true;
 		--end
 	end
@@ -1614,9 +1661,17 @@ end
 ------------------------------------------------------------------------
 function AutoTractor:checkState( onlyMaxLooking )
 
+	if      self.acCheckStateTimer ~= nil
+			and self.acDimensions      ~= nil
+			and self.acCheckStateTimer > g_currentMission.time then
+		return 
+	end
+	
 	if self.acDimensions == nil then
 		AutoTractor.calculateDimensions( self )
 	end
+	
+	self.acCheckStateTimer = g_currentMission.time + ASEGlobals.maxDtSumT
 	
 	local s = AutoSteeringEngine.getSpecialToolSettings( self )
 	
@@ -1830,24 +1885,42 @@ function AutoTractor.calculateDimensions( self )
 			and self.articulatedAxis.componentJoint ~= nil
       and self.articulatedAxis.componentJoint.jointNode ~= nil 
 			and self.articulatedAxis.rotMax then
+			
+		self.acDimensions.wheelParents = {}
 		_,_,self.acDimensions.zOffset = AutoSteeringEngine.getRelativeTranslation(self.acRefNode,self.articulatedAxis.componentJoint.jointNode);
 		local n=0;
 		for _,wheel in pairs(self.wheels) do
+			local temp1 = { getRotation(wheel.driveNode) }
+			local temp2 = { getRotation(wheel.repr) }
+			setRotation(wheel.driveNode, 0, 0, 0)
+			setRotation(wheel.repr, 0, 0, 0)
 			local x,y,z = AutoSteeringEngine.getRelativeTranslation(self.articulatedAxis.componentJoint.jointNode,wheel.driveNode);
+			setRotation(wheel.repr, unpack(temp2))
+			setRotation(wheel.driveNode, unpack(temp1))
+
 			if n==0 then
 				self.acDimensions.wheelBase = math.abs(z)
 				n = 1
 			else
-			--self.acDimensions.wheelBase = self.acDimensions.wheelBase + math.abs(z);
-			--n  = n  + 1;
-				self.acDimensions.wheelBase = math.max( math.abs(z) )
+				self.acDimensions.wheelBase = self.acDimensions.wheelBase + math.abs(z);
+				n  = n  + 1;
+			--self.acDimensions.wheelBase = math.max( math.abs(z) )
+			end
+			
+			local node = getParent( wheel.driveNode )
+			if self.acDimensions.wheelParents[node] == nil then
+				self.acDimensions.wheelParents[node] = 1
+			else
+				self.acDimensions.wheelParents[node] = self.acDimensions.wheelParents[node] + 1
 			end
 		end
 		if n > 1 then
 			self.acDimensions.wheelBase = self.acDimensions.wheelBase / n;
 		end
-	--self.acDimensions.maxSteeringAngle = 0.3 * (math.abs(self.articulatedAxis.rotMin)+math.abs(self.articulatedAxis.rotMax))
-		self.acDimensions.maxSteeringAngle = 0.5 * (math.abs(self.articulatedAxis.rotMin)+math.abs(self.articulatedAxis.rotMax))
+		-- divide max. steering angle by 2 because it is for both sides
+		self.acDimensions.maxSteeringAngle = 0.25 * (math.abs(self.articulatedAxis.rotMin)+math.abs(self.articulatedAxis.rotMax))
+		-- reduce wheel base according to max. steering angle
+		self.acDimensions.wheelBase        = self.acDimensions.wheelBase * math.cos( self.acDimensions.maxSteeringAngle ) 
 	else
 		local left  = {};
 		local right = {};
@@ -1960,7 +2033,7 @@ function AutoTractor.calculateDimensions( self )
 		self.acDimensions.radius        = 5;
 	end
 	
-	if AutoTractor.acDevFeatures then
+	if ASEGlobals.devFeatures > 0 then
 		print(string.format("wb: %0.3fm, r: %0.3fm, z: %0.3fm", self.acDimensions.wheelBase, self.acDimensions.radius, self.acDimensions.zOffset ))
 	end
 	
@@ -2449,7 +2522,7 @@ end;
 source(Utils.getFilename("AutoTractorEvents.lua", AtDirectory));
 
 
-if AutoTractor.acDevFeatures then
+if ASEGlobals.devFeatures > 0 then
 	addConsoleCommand("acReset", "Reset global AutoTractor variables to defaults.", "acReset", AutoTractor);
 end
 function AutoTractor:acReset()
@@ -2461,7 +2534,7 @@ function AutoTractor:acReset()
 end
 
 -- acSave
-if AutoTractor.acDevFeatures then
+if ASEGlobals.devFeatures > 0 then
 	addConsoleCommand("acSave", "Save the global AutoTractor variables.", "acSave", AutoTractor);
 end
 function AutoTractor:acSave()
@@ -2472,7 +2545,7 @@ function AutoTractor:acSave()
 end
 
 -- acSet
-if AutoTractor.acDevFeatures then
+if ASEGlobals.devFeatures > 0 then
 	addConsoleCommand("acSet", "Change one of the global AutoTractor variables.", "acSet", AutoTractor);
 end
 function AutoTractor:acSet(name,svalue)
@@ -2515,7 +2588,7 @@ function AutoTractor:acSet(name,svalue)
 end
 
 -- acDump
-if AutoTractor.acDevFeatures then
+if ASEGlobals.devFeatures > 0 then
 	addConsoleCommand("acDump", "Dump internal state of AutoTractor", "acDump", AutoTractor);
 end
 function AutoTractor:acDump()
