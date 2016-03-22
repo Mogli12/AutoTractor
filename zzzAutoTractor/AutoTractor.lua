@@ -60,13 +60,14 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			turnModeIndex   = { xml = "acTurnMode",    tp = "I", default = 1 },
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
-																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.4 },
-																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = 0.7 },
+																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.5 },
+																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = 1.0 },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
 AutoTractor.turnStageEnd  = { { 4, -1 },
 															{ 8, -1 },
+															{ 9, -1 },
 														--{ 23, 25 },
 															{ 25, 27 },
 															{ 27, -2 },
@@ -93,10 +94,12 @@ AutoTractor.turnStageEnd  = { { 4, -1 },
 															{ 79, -2 },
 															{ 83, 85 },
 															{ 86, -2 },
-															{ 96, -1 },
+															{ 97, -1 },
 															{103, -1 },
 															{108, -1 },
-															{114, -2 }}
+															{114, -2 },
+															{119, -2 },
+															{124, -1 }}
 
 ------------------------------------------------------------------------
 -- AICombine:updateAIMovement

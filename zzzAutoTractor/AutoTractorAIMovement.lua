@@ -132,6 +132,8 @@ end
 ------------------------------------------------------------------------
 function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 
+	self.acHighPrec = false
+
 	if not self.isServer or self.acParameters == nil or not self.acParameters.enabled then
 		return superFunc( self, dt, ... );
 	end
@@ -299,7 +301,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 	local offsetOutside;
 	local noReverseIndex = 0;
 	local angleOffset = 6;
-	local angleOffsetStrict = 3;
+	local angleOffsetStrict = 4;
 	local stoppingDist = 0.5;
 	local turn2Outside = self.acTurn2Outside;
 --==============================================================		
@@ -315,6 +317,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 	end;
 
 	local fruitsDetected, fruitsAll = AutoSteeringEngine.hasFruits( self, 0.9 )
+	
 	if fruitsDetected and self.acTurnStage < 0 then
 		if self.acFruitAllTimer == nil then
 			self.acFruitAllTimer = self.acDeltaTimeoutStart
@@ -341,9 +344,13 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		end
 
 		detected, angle2, border = AutoTractor.detectAngle( self, smooth )
+		
+		if ASEGlobals.devFeatures > 0 and self.acTurnStage == -13 then
+			print(tostring(fruitsDetected).." "..tostring(fruitsAll).." "..tostring(self.acFruitAllTimer).." "..tostring(detected).." "..tostring(border))
+		end		
 			
 		if self.acTurnStage == 0 and ( detected or not fruitsDetected ) and border <= 0 then
-			self.acHighPrec = false
+			self.acHighPrec = AutoSteeringEngine.getIsAtEnd( self )
 		end
 		
 		if border > 0 then
@@ -373,38 +380,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			self.acTurnInTheMiddle = nil
 		end
 		
-		if      self.acTurnStage == 0 
-				and ( ( not detected and border <= 0 )
-					 or AutoSteeringEngine.getIsAtEnd( self ) )
-				and AutoSteeringEngine.getTraceLength(self) > 5 then
-				
-		--if self.acParameters.leftAreaActive then
-		--	angle = angle2 
-		--else
-		--	angle = -angle2		
-		--end	
-			self.acIamDetecting = false
-			self.acHighPrec     = true
-			if noReverseIndex > 0 then
-				angle = math.min( math.max( math.rad( 0.5 * turnAngle ), -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle )
-			else
-		--	angle = math.max( angle, 0 )
-				angle = 0
-			end
-		elseif detected and self.acTurnStage == 0 and not fruitsDetected then
-			--if self.acParameters.leftAreaActive then
-			--	angle = angle2 
-			--else
-			--	angle = -angle2		
-			--end
-			--print(string.format("1.: %2.1f° / %2.1f° / ",math.deg(angle),math.deg(angle2))..tostring(self.acParameters.leftAreaActive))
-			--if angle < 0 and AutoSteeringEngine.noTurnAtEnd( self ) then
-			--	angle  = 0
-			--	angle2 = nil
-			--else
-			--	angle  = nil
-			--end
-		elseif detected then
+		if detected then
 		-- everything is ok
 		elseif  self.acTurnStage == -3 or self.acTurnStage == -13 or self.acTurnStage == -23 then
 		-- start of hired worker
@@ -429,8 +405,12 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 					AutoSteeringEngine.shiftTurnVector( self, 0.5 )
 					self.acTurnStage = 110
 				elseif self.acTurn2Outside then
-					AutoSteeringEngine.shiftTurnVector( self, 0.5 )
-					self.acTurnStage = 120
+					if AutoSteeringEngine.getTraceLength(self) > 1 then
+						AutoSteeringEngine.shiftTurnVector( self, 0.5 )
+						self.acTurnStage = 120
+					else
+						self.acTurnStage = 1
+					end
 				else
 					AutoSteeringEngine.shiftTurnVector( self, 0.5 )
 					self.acTurnStage = 115
@@ -531,9 +511,23 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		angle = math.min( math.max( math.rad( turnAngle ), -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle )
 
 		local x,z, allowedToDrive = AutoTractor.getTurnVector( self, false );
+		local toolAngle = AutoSteeringEngine.getToolAngle( self )
+		local nextTS = false
 		
-		if     self.acTurn2Outside
-				or ( math.abs( turnAngle ) < angleOffset and z > math.max( self.acDimensions.radius, ASEGlobals.minRadius ) ) then
+		if self.acTurn2Outside then
+			if      math.abs( turnAngle ) < angleOffset 
+					and math.abs( toolAngle ) < ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle then
+				nextTS = true
+			end
+		else
+			if      math.abs( turnAngle ) < angleOffset 
+					and math.abs( toolAngle ) < ASEGlobals.maxToolAngleF * self.acDimensions.maxSteeringAngle 
+					and z > math.max( self.acDimensions.radius, ASEGlobals.minRadius ) then
+				nextTS = true
+			end
+		end
+		
+		if nextTS then
 			AutoSteeringEngine.ensureToolIsLowered( self, false )
 			self.acTurnStage   = self.acTurnStage + 1;
 			self.turnTimer     = self.acDeltaTimeoutWait;
@@ -583,11 +577,12 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			self.waitForTurnTime = g_currentMission.time + self.acDeltaTimeoutWait
 			self.turnTimer       = self.acDeltaTimeoutWait
 		elseif self.acTurn2Outside then
-			angle = -self.acDimensions.maxLookingAngle
-			if math.abs( turnAngle ) > 30 then
-				self.acTurnStage = self.acTurnStage + 1;
-				self.turnTimer = self.acDeltaTimeoutStart
-			end
+		--angle = -self.acDimensions.maxLookingAngle
+		--if math.abs( turnAngle ) > 30 then
+		--	self.acTurnStage = self.acTurnStage + 1;
+		--	self.turnTimer = self.acDeltaTimeoutStart
+		--end
+			angle = 0
 		elseif math.abs( turnAngle ) > 120 - angleOffset then
 			self.acTurnStage     = self.acTurnStage + 1;
 			self.turnTimer       = self.acDeltaTimeoutStart
@@ -629,16 +624,19 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			else
 				angle = self.acDimensions.maxSteeringAngle
 			end
-		elseif self.acTurn2Outside then
-			local x,_,z = AutoSteeringEngine.getAiWorldPosition( self )			
-			
-			if self.acTurnStage4Point == nil then 
-				self.acTurnStage4Point = { x=x, z=z }
+		else
+			angle = -angle
+			if self.acTurn2Outside then
+				local x,_,z = AutoSteeringEngine.getAiWorldPosition( self )			
+				
+				if self.acTurnStage4Point == nil then 
+					self.acTurnStage4Point = { x=x, z=z }
+				else 
+					dist2 = (x-self.acTurnStage4Point.x)^2 + (z-self.acTurnStage4Point.z)^2 
+				end
 			else 
-				dist2 = (x-self.acTurnStage4Point.x)^2 + (z-self.acTurnStage4Point.z)^2 
+				dist2 = 10 
 			end
-		else 
-			dist2 = 10 
 		end
 		
 		if noReverseIndex > 0 and self.acTurn2Outside and angle ~= nil then			
@@ -2120,6 +2118,10 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 --==============================================================				
 -- forward and reduce tool angle
 		if     turnStageMod == 0 then
+		
+			if self.acTurnStage == 120 then
+				AutoTractor.setAIImplementsMoveDown(self,false,true);
+			end
 			
 			local onTrack  = false
 			angle2, onTrack = AutoSteeringEngine.navigateToSavePoint( self, turnMode )
@@ -2227,7 +2229,9 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			self.acTurnStage = self.acTurnStage -20;
 			self.turnTimer   = self.acDeltaTimeoutNoTurn;
 		
-		elseif fruitsAll and detected then
+		elseif  fruitsAll 
+				and detected 
+				and self.acTurnInTheMiddle == nil then
 			if self.acClearTraceAfterTurn then
 				AutoSteeringEngine.clearTrace( self );
 				AutoSteeringEngine.saveDirection( self, false );
@@ -2370,7 +2374,8 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 						or self.acTurnMode == "O" then
 					self.acTurnStage = 100
 				else
-					self.acTurnStage = 1;
+				--self.acTurnStage = 1;
+					self.acTurnStage = 120
 				end
 				self.turnTimer = self.acDeltaTimeoutWait;
 			elseif self.acTurnMode == "C" 
