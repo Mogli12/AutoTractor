@@ -137,7 +137,7 @@ function AutoTractor:load(xmlFile)
 	
 	self.acDeltaTimeoutWait   = math.max(Utils.getNoNil( self.waitForTurnTimeout, 1600 ), 1000 ); 
 	self.acDeltaTimeoutRun    = math.max(Utils.getNoNil( self.turnTimeout, 800 ), 500 );
-	self.acDeltaTimeoutStop   = 4 * math.max(Utils.getNoNil( self.turnStage1Timeout , 20000), 10000);
+	self.acDeltaTimeoutStop   = math.max(Utils.getNoNil( self.turnStage1Timeout , 20000), 10000);
 	self.acDeltaTimeoutStart  = math.max(Utils.getNoNil( self.turnTimeoutLong   , 6000 ), 4000 );
 	self.acDeltaTimeoutNoTurn = 2 * self.acDeltaTimeoutWait --math.max(Utils.getNoNil( self.waitForTurnTimeout , 2000 ), 1000 );
 	self.acSteeringSpeed      = Utils.getNoNil( self.aiSteeringSpeed, 0.001 );
