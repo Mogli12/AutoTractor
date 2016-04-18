@@ -7163,7 +7163,7 @@ function AutoSteeringEngine.getTaJoints2( vehicle, implement, refNode, zOffset )
 				for _,cj in pairs( trailer.componentJoints ) do
 					if thisN[cj.componentIndices[1]] and not ( allN[cj.componentIndices[2]] ) then
 						table.insert( nextN, cj.componentIndices[2] )
-						if cj.rotLimit[2] > math.rad( 0.1 ) then
+						if cj.rotLimit ~= nil and cj.rotLimit[2] ~= nil and cj.rotLimit[2] > math.rad( 0.1 ) then
 							table.insert( taJoints, index,
 														{ nodeVehicle  = trailer.components[cj.componentIndices[1]].node,
 															nodeTrailer  = trailer.components[cj.componentIndices[2]].node, 
@@ -7172,7 +7172,7 @@ function AutoSteeringEngine.getTaJoints2( vehicle, implement, refNode, zOffset )
 					end
 					if thisN[cj.componentIndices[2]] and not ( allN[cj.componentIndices[1]] ) then
 						table.insert( nextN, cj.componentIndices[1] )
-						if cj.rotLimit[2] > math.rad( 0.1 ) then
+						if cj.rotLimit ~= nil and cj.rotLimit[2] ~= nil and cj.rotLimit[2] > math.rad( 0.1 ) then
 							table.insert( taJoints, index,
 														{ nodeVehicle  = trailer.components[cj.componentIndices[2]].node,
 															nodeTrailer  = trailer.components[cj.componentIndices[1]].node, 
