@@ -89,7 +89,9 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.maxToolAngle  = 0
 	ASEGlobals.maxToolAngle2 = 0
 	ASEGlobals.maxToolAngleF = 0
+	ASEGlobals.enableAUTurn  = 0
 	ASEGlobals.enableYUTurn  = 0
+	ASEGlobals.enableKUTurn  = 0
 	ASEGlobals.aiRescueDistSq= 0
 	ASEGlobals.raiseNoFruits = 0
 	ASEGlobals.lowerAdvance  = 0
@@ -656,6 +658,11 @@ function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, lookA
 			return b, detected, t 
 		end
 		nxt = nodes[nxt].outside
+		if round > 0 then
+			for i=1,round do
+				newAngles[level+i] = nil
+			end
+		end
 	end
 	
 	print("ERROR: We should never come here")
@@ -3315,10 +3322,26 @@ function AutoSteeringEngine.getChainPoint( vehicle, i, tp )
 					end
 					a = a / ASEGlobals.offtracking
 
-					setRotation(    vehicle.aseChain.tNode[1], 0, -a, 0 )
-					setTranslation( vehicle.aseChain.tNode[1], 0, 0, tp.b1 )
-					setTranslation( vehicle.aseChain.tNode[2], tpx, 0, tp.z-tp.b1 )
-					local xt,_,zt = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.tNode[0], vehicle.aseChain.tNode[2] )
+				
+					local ca = math.cos( a )
+					local sa = math.sin( a )
+				
+				  local xt = tpx * ca - ( tp.z-tp.b1 ) * sa
+					local zt = tp.b1 + tpx * sa + ( tp.z-tp.b1 ) * ca
+					
+				--if true then
+				--	setRotation(    vehicle.aseChain.tNode[1], 0, -a, 0 )
+				--	setTranslation( vehicle.aseChain.tNode[1], 0, 0, tp.b1 )
+				--	setTranslation( vehicle.aseChain.tNode[2], tpx, 0, tp.z-tp.b1 )
+				--	local xt2,_,zt2 = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.tNode[0], vehicle.aseChain.tNode[2] )
+				--	
+				--	if math.abs( xt - xt2 ) > 1e-3 then
+				--		print( string.format( "a: %3d° xt: %1.2fm xt2: %1.2fm", math.deg(a), xt, xt2 ) )
+				--	end
+				--	if math.abs( zt - zt2 ) > 1e-3 then
+				--		print( string.format( "a: %3d° zt: %1.2fm zt2: %1.2fm", math.deg(a), zt, zt2 ) )
+				--	end
+				--end
 				
 					dx = tpx - xt
 					dz = zt - tp.z
@@ -5233,12 +5256,20 @@ function AutoSteeringEngine.addTool( vehicle, implement, object, reference )
 	if      tool.isPlough 
 			and tool.aiForceTurnNoBackward 
 			and tool.obj.rotationPart.turnAnimation ~= nil
-			and tool.obj.playAnimation              ~= nil then
-		if object.configFileName == "data/vehicles/tools/lemken/lemkenDiamant12.xml" then
-			tool.ploughTransport = true
-		else
-			tool.ploughTransport = ASEGlobals.ploughTransport > 0
-		end
+			and tool.obj.playAnimation              ~= nil
+			-- plough transport always on
+			and ( ASEGlobals.ploughTransport   > 2
+			-- plough transport for vogel&noot and lemken 
+				 or ( ASEGlobals.ploughTransport > 1 
+					and ( object.configFileName == "data/vehicles/tools/vogelNoot/vogelNootHeros1000.xml"
+						 or ( object.customEnvironment ~= nil 
+							and Utils.removeModDirectory(self.configFileName) == "vogelNootHeros1000.xml" ) ) )
+			-- plough transport for lemken only
+				 or ( ASEGlobals.ploughTransport > 0 
+					and ( object.configFileName == "data/vehicles/tools/lemken/lemkenDiamant12.xml"
+						 or ( object.customEnvironment ~= nil 
+							and Utils.removeModDirectory(self.configFileName) == "lemkenDiamant12.xml" ) ) ) ) then
+		tool.ploughTransport = true
 	end
 		
 	if      useAI 

@@ -598,6 +598,12 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		--	self.turnTimer = self.acDeltaTimeoutStart
 		--end
 			angle = 0
+		elseif math.abs( turnAngle ) > 90 - angleOffset 
+		   and not fruitsDetected then
+			self.acTurnStage     = self.acTurnStage + 1;
+			self.turnTimer       = self.acDeltaTimeoutStart
+			angle                = 0
+			self.waitForTurnTime = g_currentMission.time + self.acDeltaTimeoutWait
 		elseif math.abs( turnAngle ) > 120 - angleOffset then
 			self.acTurnStage     = self.acTurnStage + 1;
 			self.turnTimer       = self.acDeltaTimeoutStart
@@ -914,7 +920,14 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 --==============================================================				
 -- wait
 	elseif self.acTurnStage == 26 then
-		angle = self.acDimensions.maxSteeringAngle;
+		local onTrack    = false
+		angle2, onTrack  = AutoSteeringEngine.navigateToSavePoint( self, 1 )
+		if not onTrack then
+			angle  = AutoTractor.getMaxAngleWithTool( self, false )
+			angle2 = nil
+		else
+			angle  = nil
+		end
 		
 		if self.turnTimer < 0 then
 			self.acTurnStage   = self.acTurnStage + 1;					
@@ -959,7 +972,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			angle2, onTrack  = AutoSteeringEngine.navigateToSavePoint( self, 1 )
 			if not onTrack then
 				if math.abs( turnAngle ) < 150 then
-					print("no angle")
+				--print("no angle")
 					angle  = AutoTractor.getMaxAngleWithTool( self, false )
 					angle2 = nil
 				else

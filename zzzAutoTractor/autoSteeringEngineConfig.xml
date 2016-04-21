@@ -16,7 +16,7 @@
     <!--angleStep type="degree" value="15" /-->
     <angleStep type="degree" value="4" />
     <angleStepDec type="degree" value="0.05" /> <!-- reduce by 1° per 20m -->
-    <angleFactorNoFix type="float" value="2.5" />
+    <angleFactorNoFix type="float" value="3" /> <!-- 4° with fix attach. / 12° with trailer or trailer_low -->
     <chainDivide value="11" />
     <chainDivide2 value="5" />
     <chainSplit value="0" />
@@ -81,13 +81,15 @@
 		<maxDtSumT value="250" /> <!-- 10 fps => 100 ms -->
 		<maxDtSum value="100" /> <!-- 10 fps => 100 ms -->
 		<maxDtDist type="float" value="0.077284" /> <!-- 10 km/h => 2.78 m/s => 0.278 m @ 10 fps; square-->
-		<ploughTransport type="bool" value="false" />
+		<ploughTransport value="0"/>
 		<maxSpeed type="float" value="15"/>
 		<maxTurnCheck type="float" value="15"/>		
 		<maxToolAngle type="degree" value="60" />
 		<maxToolAngle2 type="degree" value="30" />
 		<maxToolAngleF type="float" value="0.2" />
+		<enableAUTurn type="bool" value="false" />
 		<enableYUTurn type="bool" value="false" />
+		<enableKUTurn type="bool" value="false" />
 		<aiRescueDistSq type="float" value="1600" />
 		<raiseNoFruits type="bool" value="false" />
 		<lowerAdvance type="float" value="2" />

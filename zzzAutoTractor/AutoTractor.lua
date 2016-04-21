@@ -58,6 +58,7 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			isHired         = { xml = "acIsHired",     tp = "B", default = false },
 																			bigHeadland     = { xml = "acBigHeadland", tp = "B", default = true },
 																			turnModeIndex   = { xml = "acTurnMode",    tp = "I", default = 1 },
+																			turnModeIndexC  = { xml = "acTurnModeC",   tp = "I", default = 1 },
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
 																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.5 },
@@ -297,14 +298,14 @@ function AutoTractor:draw()
 		end	
 	elseif self.acLAltPressed then
 		if self.acParameters.upNDown then
-			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_UTURN_ON"), InputBinding.AUTO_TRACTOR_UTURN_ON_OFF)
+			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_UTURN_ON"), InputBinding.AUTO_TRACTOR_UTURN_ON_OFF)
 		else
-			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_UTURN_OFF"), InputBinding.AUTO_TRACTOR_UTURN_ON_OFF)
+			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_UTURN_OFF"), InputBinding.AUTO_TRACTOR_UTURN_ON_OFF)
 		end
 		if self.acParameters.noSteering then
-			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_STEERING_OFF"), InputBinding.AUTO_TRACTOR_STEERING)
+			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_STEERING_OFF"), InputBinding.AUTO_TRACTOR_STEERING)
 		else
-			g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_STEERING_ON"), InputBinding.AUTO_TRACTOR_STEERING)
+			g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_STEERING_ON"), InputBinding.AUTO_TRACTOR_STEERING)
 		end
 	else
 		if self.acParameters.rightAreaActive then
@@ -315,7 +316,7 @@ function AutoTractor:draw()
 	end	
 	
 	if self.acPause then
-		g_currentMission:addHelpButtonText(AutoCombineHud.getText("AUTO_TRACTOR_CONTINUE"), InputBinding.TOGGLE_CRUISE_CONTROL)
+		g_currentMission:addHelpButtonText(AutoTractorHud.getText("AUTO_TRACTOR_CONTINUE"), InputBinding.TOGGLE_CRUISE_CONTROL)
 	end
 	
 end;
@@ -542,6 +543,13 @@ function AutoTractor:getAngleFactorComp()
 	return "angleFactor"
 end
 
+function AutoTractor:getTurnIndexComp()
+	if self.acParameters ~= nil and	not ( self.acParameters.upNDown ) then
+		return "turnModeIndexC"
+	end
+	return "turnModeIndex"
+end
+
 function AutoTractor:evalAngleUp()
 	if not self.acParameters.enabled then 
 		return true 
@@ -728,11 +736,12 @@ end
 
 function AutoTractor:setTurnMode()
 	AutoTractor.checkAvailableTurnModes( self, true )
-	self.acParameters.turnModeIndex = self.acParameters.turnModeIndex + 1
-	if self.acParameters.turnModeIndex > table.getn( self.acTurnModes ) then
-		self.acParameters.turnModeIndex = 1
+	local c = AutoTractor.getTurnIndexComp(self)
+	self.acParameters[c] = self.acParameters[c] + 1
+	if self.acParameters[c] > table.getn( self.acTurnModes ) then
+		self.acParameters[c] = 1
 	end
-	self.acTurnMode = self.acTurnModes[self.acParameters.turnModeIndex]
+	self.acTurnMode = self.acTurnModes[self.acParameters[c]]
 end
 
 function AutoTractor:getTurnModeImage()
@@ -976,11 +985,11 @@ function AutoTractor:update(dt)
 					and self.acDimensions ~= nil
 					and ( self.isAITractorActivated or self.acTurnStage >= 198 ) then	
 				AutoSteeringEngine.drawLines( self );
-			else
-				if not ( self.isAITractorActivated or self.acTurnStage >= 198 ) then	
-					AutoTractor.checkState( self )
-				end
-				AutoSteeringEngine.drawMarker( self );
+		--else
+		--	if not ( self.isAITractorActivated or self.acTurnStage >= 198 ) then	
+		--		AutoTractor.checkState( self )
+		--	end
+		--	AutoSteeringEngine.drawMarker( self );
 			end
 		elseif ASEGlobals.showTrace > 0 then		
 			for _,marker in pairs( {"aiCurrentLeftMarker", "aiCurrentRightMarker", "aiCurrentBackMarker"} ) do 						
@@ -1617,7 +1626,7 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 		table.insert( self.acTurnModes, "T" )
 	elseif self.acParameters.upNDown then
 		if rev  then
-			if sut then
+			if ASEGlobals.enableAUTurn > 0 and sut then
 			  table.insert( self.acTurnModes, "A" )
 			end
 			if      ASEGlobals.enableYUTurn     > 0
@@ -1638,25 +1647,29 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 		end
 		if revS then
 			table.insert( self.acTurnModes, "7"	)
-		--table.insert( self.acTurnModes, "K"	)
+		end
+		if ASEGlobals.enableKUTurn > 0 then
+			table.insert( self.acTurnModes, "K"	)
 		end
 		table.insert( self.acTurnModes, "C"	)
 	end
 	
-	if     self.acParameters.turnModeIndex == nil
-			or self.acParameters.turnModeIndex < 1 then
-		self.acParameters.turnModeIndex = 1
+	local c = AutoTractor.getTurnIndexComp(self)
+	
+	if     self.acParameters[c] == nil
+			or self.acParameters[c] < 1 then
+		self.acParameters[c] = 1
 		if noEventSend == nil or not noEventSend then
 			AutoTractor.sendParameters(self)
 		end
-	elseif self.acParameters.turnModeIndex > table.getn( self.acTurnModes ) then
-		self.acParameters.turnModeIndex = table.getn( self.acTurnModes )
+	elseif self.acParameters[c] > table.getn( self.acTurnModes ) then
+		self.acParameters[c] = table.getn( self.acTurnModes )
 		if noEventSend == nil or not noEventSend then
 			AutoTractor.sendParameters(self)
 		end
 	end
 
-	self.acTurnMode = self.acTurnModes[self.acParameters.turnModeIndex]
+	self.acTurnMode = self.acTurnModes[self.acParameters[c]]
 end
 
 ------------------------------------------------------------------------
@@ -1801,7 +1814,7 @@ end
 
 function AutoTractor:getSaveAttributesAndNodes(nodeIdent)
 	
-	local attributes = 'acVersion="1.4"';
+	local attributes = 'acVersion="2.1"';
 	
 	local skip = true
 	
@@ -1846,6 +1859,13 @@ function AutoTractor:loadFromAttributesAndNodes(xmlFile, key, resetVehicles)
 	
 	if self.setIsReverseDriving ~= nil then
 		self:setIsReverseDriving( self.acParameters.inverted, false )
+	end
+	
+	if version == '1.4' then
+		self.acParameters.turnModeIndexC = self.acParameters.turnModeIndex
+		if self.acParameters.upNDown and self.acParameters.turnModeIndex > 1 then
+			self.acParameters.turnModeIndex = self.acParameters.turnModeIndex - 1
+		end
 	end
 
 	return BaseMission.VEHICLE_LOAD_OK;
