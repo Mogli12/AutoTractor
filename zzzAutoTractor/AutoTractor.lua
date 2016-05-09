@@ -43,7 +43,7 @@ function AutoTractor:debugPrint( ... )
 	if ASEGlobals.devFeatures > 0 then
 		print( ... )
 	end
-	if ASEGlobals.showInfo > 0 and self.atMogliInitDone then
+	if self ~= nil and ASEGlobals.showInfo > 0 and self.atMogliInitDone then
 		self.atHud.InfoText = tostring( ... )
 	end	
 end
@@ -61,8 +61,8 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			turnModeIndexC  = { xml = "acTurnModeC",   tp = "I", default = 1 },
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
-																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.5 },
-																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = 1.0 },
+																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.4 },
+																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = 0.8 },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
@@ -95,7 +95,7 @@ AutoTractor.turnStageEnd  = { { 4, -1 },
 															{ 79, -2 },
 															{ 83, 85 },
 															{ 86, -2 },
-															{ 97, -1 },
+															{ 99, -1 },
 															{103, -1 },
 															{108, -1 },
 															{114, -2 },
@@ -592,7 +592,13 @@ function AutoTractor:getMaxLookingAngleValue( noScale )
 end
 
 function AutoTractor:getAngleFactor(old)
-	new = string.format(old..": %2.1f°",math.deg(AutoTractor.getMaxLookingAngleValue( self )));
+	local dg = math.deg(AutoTractor.getMaxLookingAngleValue( self ))
+	local pr = 0
+	if      self.acParameters                                       ~= nil
+			and self.acParameters[AutoTractor.getAngleFactorComp(self)] ~= nil then
+		pr = 100 * self.acParameters[AutoTractor.getAngleFactorComp(self)]
+	end
+	new = string.format(old..": %2.1f° / %3.0f%%",dg,pr);
 	return new
 end
 
@@ -1013,6 +1019,25 @@ function AutoTractor:updateTick( dt )
 	self.acIamDetecting = false
 
 	if self.acParameters ~= nil and self.acParameters.enabled then
+		local statDt      = 0
+		local statEventID = "updateAIMovement"
+		local prevHook
+
+		if ASEGlobals.showStat > 0 then
+			prevHook = { debug.gethook() }
+			local function hook()
+				statDt = statDt + 1
+			end
+			debug.sethook( hook, "l", 1000 )
+		end
+		
+		local function closeEvent( name )
+			if prevHook ~= nil then
+				debug.sethook( prevHook[1], prevHook[2], prevHook[3] )		
+				prevHook = nil
+				AutoTractor.statEvent( self, name, statDt )
+			end
+		end
 
 		local doGreenDirectCut = false
 		if not ( self:getIsActive() ) or AutoTractor.noGreenDirectCut then
@@ -1100,7 +1125,9 @@ function AutoTractor:updateTick( dt )
 				local wx, wy, wz = getWorldTranslation( self.acRefNode )
 				local doit = false
 				
-				if self.aseCurrentFieldCo ~= nil then
+				if     ASEGlobals.maxDtSum <= 0 then
+					doit = true
+				elseif self.aseCurrentFieldCo ~= nil then
 					doit = true
 				elseif self.acHighPrec and self.acDtSum + self.acDtSum > ASEGlobals.maxDtSum then 
 					doit = true
@@ -1112,18 +1139,11 @@ function AutoTractor:updateTick( dt )
 						doit = true
 					end
 				end 
-
-				if self.acAiNextDtIsAfter then		
-					self.acAiNextDtIsAfter = false
-					AutoTractor.statEvent( self, "updateTickAfter", dt )
-				else
-					AutoTractor.statEvent( self, "updateTickOther", dt )
-				end
 				
 				if doit then
 					self.acAiNextDtIsAfter = true
 					self.acAiPos = { wx, wy, wz }
-					AutoTractor.statEvent( self, "updateAIMovement", self.acDtSum )
+					statEventID = "updateAIMovement_X"
 					
 					if ASEGlobals.devFeatures <= 0 then
 						AutoTractorHud.setInfoText( self )
@@ -1136,7 +1156,12 @@ function AutoTractor:updateTick( dt )
 					end
 					
 					AITractor.updateAIMovement(	self, self.acDtSum )
-					self.acDtSum = Utils.clamp( self.acDtSum - ASEGlobals.maxDtSum, 0, ASEGlobals.maxDtSum )
+					
+					if ASEGlobals.maxDtSum > 0 then
+						self.acDtSum = Utils.clamp( self.acDtSum - ASEGlobals.maxDtSum, 0, ASEGlobals.maxDtSum )
+					else
+						self.acDtSum = 0
+					end
 				else
 					AutoSteeringEngine.steerContinued( self )
 					AutoSteeringEngine.driveContinued( self )
@@ -1155,7 +1180,9 @@ function AutoTractor:updateTick( dt )
 		if doGreenDirectCut then
 			AutoSteeringEngine.greenDirectCut( self, true )
 		end
-	end
+		
+		closeEvent( statEventID )
+	end	
 end
 
 ------------------------------------------------------------------------
@@ -1353,6 +1380,7 @@ function AutoTractor:newStartAITractor( superFunc, noEventSend, ... )
 		
 		AutoTractor.roueInitWheels( self );
 		
+		self.acHighPrec    = false
 		self.acDimensions  = nil;
 		self.acTurnStage   = -3;
 		self.turnTimer     = self.acDeltaTimeoutWait;
@@ -1473,7 +1501,7 @@ function AutoTractor:shiftAIMarker()
 			AutoTractor.calculateDimensions( self )
 		end
 		local d, t, z = AutoSteeringEngine.checkTools( self );
-		h = math.max( 0, math.max( 0, t-z ) + math.max( 0, -t-self.acDimensions.zOffset ) + AutoTractor.calculateHeadland( "T", d, z, t, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland ) + self.acParameters.turnOffset )
+		h = math.max( 0, math.max( 0, t-z ) + math.max( 0, -t-self.acDimensions.zOffset ) + AutoTractor.calculateHeadland( "T", d, z, t, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland, AutoSteeringEngine.getNoReverseIndex( self ) ) + self.acParameters.turnOffset )
 	end 
 	
 	if math.abs( h ) < 0.01 and self.atShiftedMarker == nil then
@@ -1625,6 +1653,9 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 	if not ( self.acParameters.enabled ) then 
 		table.insert( self.acTurnModes, "T" )
 	elseif self.acParameters.upNDown then
+		if revS then
+			table.insert( self.acTurnModes, "T" )
+		end
 		if rev  then
 			if ASEGlobals.enableAUTurn > 0 and sut then
 			  table.insert( self.acTurnModes, "A" )
@@ -1635,9 +1666,6 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 					and self.acDimensions.distance < self.acDimensions.radius + 1.5 then
 				table.insert( self.acTurnModes, "Y" )
 			end
-		end
-		if revS then
-			table.insert( self.acTurnModes, "T" )
 		end
 		table.insert( self.acTurnModes, "O" )
 		table.insert( self.acTurnModes, "8" )
@@ -2065,7 +2093,7 @@ end
 ------------------------------------------------------------------------
 -- calculateHeadland
 ------------------------------------------------------------------------
-function AutoTractor.calculateHeadland( turnMode, realWidth, zBack, toolDist, radius, wheelBase, big )
+function AutoTractor.calculateHeadland( turnMode, realWidth, zBack, toolDist, radius, wheelBase, big, noRevIdx )
 
 	local width = 1.5
 	if big then
@@ -2076,7 +2104,9 @@ function AutoTractor.calculateHeadland( turnMode, realWidth, zBack, toolDist, ra
 	end
 	
 	local frontToBack = 1
-	if big then
+	if noRevIdx ~= nil and noRevIdx <= 0 and turnMode == "T" then
+		frontToBack = math.max( -zBack, 1 )
+	elseif big then
 		frontToBack = math.max( toolDist - zBack, 1 )
 	end
 	
@@ -2154,8 +2184,8 @@ function AutoTractor.calculateDistances( self )
 
 	self.acDimensions.insideDistance = math.max( 0, self.acDimensions.toolDistance - 1 - self.acDimensions.distance +(self.acDimensions.radius * math.cos( self.acDimensions.maxSteeringAngle )) );
 	self.acDimensions.uTurnDistance  = math.max( 0, 1 + self.acDimensions.toolDistance + self.acDimensions.distance - self.acDimensions.radius);	
-	self.acDimensions.headlandDist   = AutoTractor.calculateHeadland( self.acTurnMode, self.acDimensions.distance, self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland )
-	self.acDimensions.collisionDist  = 1 + AutoTractor.calculateHeadland( self.acTurnMode, math.max( self.acDimensions.distance, 1.5 ), self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland )
+	self.acDimensions.headlandDist   = AutoTractor.calculateHeadland( self.acTurnMode, self.acDimensions.distance, self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland, AutoSteeringEngine.getNoReverseIndex( self ) )
+	self.acDimensions.collisionDist  = 1 + AutoTractor.calculateHeadland( self.acTurnMode, math.max( self.acDimensions.distance, 1.5 ), self.acDimensions.zBack, self.acDimensions.toolDistance, self.acDimensions.radius, self.acDimensions.wheelBase, self.acParameters.bigHeadland, AutoSteeringEngine.getNoReverseIndex( self ) )
 	
 	--if self.acShowDistOnce == nil then
 	--	self.acShowDistOnce = 1
