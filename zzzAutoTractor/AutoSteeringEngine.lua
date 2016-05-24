@@ -26,7 +26,7 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.widthDec     = 0
 	ASEGlobals.widthMaxDec  = 0
 	ASEGlobals.angleStep    = 0
-	ASEGlobals.angleStepInc= 0
+	ASEGlobals.angleStepInc = 0
 	ASEGlobals.angleStepDec = 0
 	ASEGlobals.fixAngleStep = 0
 	ASEGlobals.angleFactorInside = 0
@@ -76,8 +76,11 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.maxDtDist     = 0
 	ASEGlobals.maxDtAngle    = 0
 	ASEGlobals.maxDetectDt   = 0
-	ASEGlobals.maxDetectSq   = 0
-	ASEGlobals.maxDetectSq2  = 0
+	ASEGlobals.maxDetectZ0   = 0
+	ASEGlobals.maxDetectZ1   = 0
+	ASEGlobals.maxDetectMin  = 0
+	ASEGlobals.maxDetectMax  = 0
+	ASEGlobals.maxDetectBack = 0
 	ASEGlobals.showStat      = 0
 	ASEGlobals.ploughTransport = 0
 	ASEGlobals.maxSpeed      = 0
@@ -265,9 +268,47 @@ function AutoSteeringEngine.getIsAtEnd( vehicle )
 end
 		
 ------------------------------------------------------------------------
+-- getDistanceToChain
+------------------------------------------------------------------------
+function AutoSteeringEngine.getDistanceToChain( vehicle )
+		
+	if     vehicle.aseChain.lastBestAngle == nil then
+		return 1e6, -1, 0
+	elseif table.getn( vehicle.aseChain.lastBestAngle ) < ASEGlobals.chainBorder then		
+		return 1e6, -1, 0
+	end
+	
+	local indexMax = table.getn( vehicle.aseChain.lastBestAngle )
+	for i,a in pairs(vehicle.aseChain.lastBestAngle) do
+		vehicle.aseChain.nodes[i].angle = a
+		if math.abs( vehicle.aseChain.nodes[i].angle - a ) > 1E-5 then
+			AutoSteeringEngine.setChainStatus( vehicle, i, ASEStatus.initial )
+		end
+	end
+	AutoSteeringEngine.applyRotation( vehicle, indexMax )	
+	
+	local wx,wy,wz = AutoSteeringEngine.getAiWorldPosition( vehicle )
+
+	local distZ    = 0
+	for i=1,indexMax do
+		local lx,_,lz = worldToLocal( vehicle.aseChain.nodes[i].index2, wx, wy, wz )
+		if lz < vehicle.aseChain.nodes[i].length then
+			if not ( vehicle.aseLRSwitch ) then
+				lx = -lx
+			end
+			lz = lz + distZ
+			return lx, lz, i
+		end
+		distZ = distZ + vehicle.aseChain.nodes[i].length
+	end
+	
+	return 1e6, -1, 0
+end
+		
+------------------------------------------------------------------------
 -- getChainResult
 ------------------------------------------------------------------------
-function AutoSteeringEngine.getChainResult( vehicle, detected, border, indexMax )
+function AutoSteeringEngine.getChainResult( vehicle, detected, border, indexMax, distI )
 
 	local avg = nil
 	
@@ -297,9 +338,9 @@ function AutoSteeringEngine.getChainResult( vehicle, detected, border, indexMax 
 			avg = 0
 		elseif ASEGlobals.chainAvg > 1 then
 			local avgMin = 1		
-				while avgMin < ASEGlobals.chainAvg and vehicle.aseChain.nodes[avgMin].distance < -vehicle.aseDistance do
-					avgMin = avgMin + 1
-				end
+			while avgMin < ASEGlobals.chainAvg and vehicle.aseChain.nodes[avgMin].distance < -vehicle.aseDistance do
+				avgMin = avgMin + 1
+			end
 			
 			if avg < avgMin then
 				avg = math.min( avgMin, avgMax )
@@ -311,10 +352,13 @@ function AutoSteeringEngine.getChainResult( vehicle, detected, border, indexMax 
 	else 
 		avg = 0 
 	end 
-	
+		
 	local angle = vehicle.aseChain.nodes[1].steering
 	
-	if ASEGlobals.chainAvg > 0 and avg >= 1 and math.abs( angle ) > 1E-3 and vehicle.aseDistance < 0 then
+	if      ASEGlobals.chainAvg > 0 
+			and math.abs( angle )   > 1E-3 
+			and vehicle.aseDistance < 0 
+			and avg                 >= Utils.getNoNil( distI, 1 ) then
 		local xw1,yw1,zw1 = AutoSteeringEngine.getAiWorldPosition( vehicle )
 		local xw2,yw2,zw2 = getWorldTranslation( vehicle.aseChain.nodes[avg+1].index )
 		if avg < indexMax then
@@ -323,33 +367,6 @@ function AutoSteeringEngine.getChainResult( vehicle, detected, border, indexMax 
 			yw2 = yw2 + 0.5 * ( yw3 - yw2 )
 			zw2 = zw2 + 0.5 * ( zw3 - zw2 )
 		end
-		
-	--if vehicle.aseChain.smooth == nil or vehicle.aseChain.PointBuffer == nil then
-	--	vehicle.aseChain.PointBuffer = {{ x=xw2, y=yw2, z=zw2 }}
-	--else
-	--	local newBuffer = {}
-	--	for _,p in pairs(vehicle.aseChain.PointBuffer) do
-	--		if Utils.vector3LengthSq( p.x-xw2,p.y-yw2,p.z-zw2 ) < 0.008 then
-	--			table.insert( newBuffer, p )
-	--		end
-	--	end
-	--	vehicle.aseChain.PointBuffer = newBuffer		
-	--	table.insert( vehicle.aseChain.PointBuffer, { x=xw2, y=yw2, z=zw2 } )
-	--end
-	--
-	--if table.getn( vehicle.aseChain.PointBuffer ) > 1 then
-	--	xw2 = 0
-	--	yw2 = 0
-	--	zw2 = 0
-	--	for _,p in pairs(vehicle.aseChain.PointBuffer) do
-	--		xw2 = xw2 + p.x
-	--		yw2 = yw2 + p.y
-	--		zw2 = zw2 + p.z
-	--	end
-	--	xw2 = xw2 / table.getn( vehicle.aseChain.PointBuffer ) 
-	--	yw2 = yw2 / table.getn( vehicle.aseChain.PointBuffer ) 
-	--	zw2 = zw2 / table.getn( vehicle.aseChain.PointBuffer ) 
-	--end
 		
 		local dirx,_,dirz = worldDirectionToLocal( vehicle.aseChain.refNode, xw2-xw1, yw2-yw1, zw2-zw1 )
 		local d = dirx*dirx + dirz*dirz
@@ -1032,7 +1049,7 @@ function AutoSteeringEngine.processChainLevel( vehicle, angles, upToLevel, check
 end
 
 ------------------------------------------------------------------------
--- processChainNew
+-- processChain
 ------------------------------------------------------------------------
 function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, forceDetected )
 
@@ -1058,7 +1075,6 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, forceDetec
 	end
 	
 	local detected  = false
-	indexMax = vehicle.aseChain.chainMax
 	
 	if vehicle.aseToolParams == nil or table.getn( vehicle.aseToolParams ) < 1 then
 		return false, 0,0
@@ -1075,38 +1091,46 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, forceDetec
 	
 	vehicle.acIamDetecting = true
 
-	local maxDetectSq = ASEGlobals.maxDetectSq2
+	local maxDetectZ = ASEGlobals.maxDetectZ1
 	if useBuffer then
-		maxDetectSq = ASEGlobals.maxDetectSq
+		maxDetectZ = ASEGlobals.maxDetectZ0
 	end
 	
-	if      ASEGlobals.maxDetectDt         >  0
-			and maxDetectSq                    >  0 
-			and vehicle.aseChain.lastBestAngle ~= nil
-			and vehicle.aseChain.valid         
-			and vehicle.aseChain.time          >  g_currentMission.time
-			and ( vehicle.aseChain.smooth      == nil 
-				 or vehicle.aseChain.smooth      >= s )
-			and table.getn( vehicle.aseChain.lastBestAngle ) >= ASEGlobals.chainBorder then		
-		local lsq = Utils.vector2LengthSq( vehicle.aseChain.wx - wx, vehicle.aseChain.wz - wz )
-		if lsq < maxDetectSq then
-			indexMax = table.getn( vehicle.aseChain.lastBestAngle )
-			for i,a in pairs(vehicle.aseChain.lastBestAngle) do
-				vehicle.aseChain.nodes[i].angle = a
-			end
-			AutoSteeringEngine.setChainStatus( vehicle, 1, ASEStatus.initial )
-			AutoSteeringEngine.applyRotation( vehicle, indexMax )	
+	local append = false
+	local distX, distZ, distI = 0, 0, 0
+	local indexMax = 0
+	if vehicle.aseChain.lastBestAngle ~= nil then
+		indexMax = table.getn( vehicle.aseChain.lastBestAngle )
+	end
+	
+	if      ASEGlobals.maxDetectDt    >  0
+			and maxDetectZ                >  0
+			and indexMax                  >= ASEGlobals.chainBorder
+			and vehicle.aseChain.valid    
+			and vehicle.aseChain.time     >  g_currentMission.time
+			and ( vehicle.aseChain.smooth == nil or vehicle.aseChain.smooth >= s ) then		
+		
+		distX, distZ, distI = AutoSteeringEngine.getDistanceToChain( vehicle )
+		
+	--print(string.format("%0.3f %2.3f %2d %2d",distX, distZ, distI, indexMax ))
+		
+		if      indexMax + 1 - distI    >= ASEGlobals.chainBorder
+				and -ASEGlobals.maxDetectZ1 <= distZ and distZ <= maxDetectZ 
+				and ASEGlobals.maxDetectMin <= distX and distX <= ASEGlobals.maxDetectMax then
 			local border, total = AutoSteeringEngine.getAllChainBorders( vehicle, ASEGlobals.chainStart, indexMax )
 			if border <= 0 then			
-				closeEvent("pb")
-				return AutoSteeringEngine.getChainResult( vehicle, true, border, indexMax )
+			--if ASEGlobals.zeroAngle > 0 and distI > 1 then
+			--	append = true
+			--else
+					closeEvent("pb")
+					return AutoSteeringEngine.getChainResult( vehicle, true, border, indexMax, distI )
+			--end
 			end
 		end
 	end
-	
-	AutoSteeringEngine.syncRootNode( vehicle, true )
-	
-	vehicle.aseChain.time   = g_currentMission.time + ASEGlobals.maxDetectDt
+		
+	indexMax = vehicle.aseChain.chainMax
+		
 	vehicle.aseChain.valid  = false
 	vehicle.aseChain.smooth = nil
 	vehicle.aseChain.wx     = wx
@@ -1145,8 +1169,24 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, forceDetec
 	vehicle.aseChain.hit = 0
 	vehicle.aseChain.mis = 0
 	
-	local b, d, t = AutoSteeringEngine.processChainLevel( vehicle, {}, indexMax, checkAllDist, forceDetected )
-		
+	local b, d, t = 0, false, {}
+	if append then
+		local tl = {}
+		local tn = table.getn(vehicle.aseChain.lastBestAngle)
+		for i,a in pairs(vehicle.aseChain.lastBestAngle) do
+			local j = i + 1 - distI
+			if j >= 1 and i <= tn - ASEGlobals.maxDetectBack then
+				tl[j] = a
+			end
+		end
+		b, d, t = AutoSteeringEngine.processChainLevel( vehicle, tl, indexMax, checkAllDist, forceDetected )
+		d = true
+	else
+		vehicle.aseChain.time   = g_currentMission.time + ASEGlobals.maxDetectDt
+		AutoSteeringEngine.syncRootNode( vehicle, true )	
+		b, d, t = AutoSteeringEngine.processChainLevel( vehicle, {}, indexMax, checkAllDist, forceDetected )
+	end
+	
 --AutoTractor.debugPrint( vehicle,tostring(vehicle.aseChain.hit).." / "..tostring(vehicle.aseChain.mis))	
 	
 	vehicle.aseChain.collectCbr = nil
@@ -3141,7 +3181,7 @@ function AutoSteeringEngine.applySteering( vehicle, toIndex )
 	--for j=1,vehicle.aseChain.chainMax+1 do 
 		local b = a
 
-		if     ASEGlobals.zeroAngle2
+		if     ASEGlobals.zeroAngle2 > 0
 				or ( j == 1 and AutoSteeringEngine.isSetAngleZero( vehicle ) ) then 
 			local aMin, aMax 
 			

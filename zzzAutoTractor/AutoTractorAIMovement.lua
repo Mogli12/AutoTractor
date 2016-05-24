@@ -96,13 +96,13 @@ end
 -- AutoTractor:checkCorrectField
 ------------------------------------------------------------------------
 function AutoTractor:checkIsCorrectField()
-	local wx,_,wz = localToWorld( self.aseChain.refNode, 0.5 * ( self.aseActiveX + self.aseOtherX ), 0, 0.5 * ( self.aseStart + self.aseDistance ) )
-	if self.aseCurrentField ~= nil and not AutoSteeringEngine.checkField( self, wx, wz ) then
-		local checkFunction, areaTotalFunction = AutoSteeringEngine.getCheckFunction( self )
-		if AutoSteeringEngine.checkFieldNoBuffer( wx, wz, checkFunction ) then
-			return false 
-		end
-	end
+--local wx,_,wz = localToWorld( self.aseChain.refNode, 0.5 * ( self.aseActiveX + self.aseOtherX ), 0, 0.5 * ( self.aseStart + self.aseDistance ) )
+--if self.aseCurrentField ~= nil and not AutoSteeringEngine.checkField( self, wx, wz ) then
+--	local checkFunction, areaTotalFunction = AutoSteeringEngine.getCheckFunction( self )
+--	if AutoSteeringEngine.checkFieldNoBuffer( wx, wz, checkFunction ) then
+--		return false 
+--	end
+--end
 	
 	return true
 end

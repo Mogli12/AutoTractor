@@ -13,20 +13,20 @@
     <!--angleStep type="degree" value="15" /-->
 		
     <angleStep    type="degree" value="0" />
-    <angleStepInc type="degree" value="2" />
-    <angleStepDec type="degree" value="0" /> <!-- 0.5 => reduce by 10° per 20m -->
+    <angleStepInc type="degree" value="3" /> <!-- 27° / 45° -->
+    <angleStepDec type="degree" value="0.2" /> <!-- 0.2 => reduce by 10° per 50m -->
 		<fixAngleStep type="bool" value="true"/>
 		
     <angleFactorInside type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
     <angleFactorNoFix type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
-    <chainDivide0 value="8" />
-    <chainDivide value="6" />
+    <chainDivide0 value="12" />
+    <chainDivide value="8" />
     <chainDivide2 value="2" />
-		<chainMinStepDist type="float" value="0.1"/>
+		<chainMinStepDist type="float" value="0.2"/>
 		<staticRoot type="bool" value="true" />
 		
-    <chainLen   type="vector" value="1 1.5 1.5 2 2 2.5 2.5 3 3 3 3 3 3"/>--> <!-- with fix attacher: 31 m (6+7+9+9)-->      
-		<chainStep0 type="vector" value="4 3 3 3 3 3 3 3 3 3 3 3 2 1"/>-->
+    <chainLen   type="vector" value="1 1.5 1.5 2 3 3 3 3 3 3 3 3 3"/>--> <!-- with fix attacher: 31 m (6+9+9+9)-->      
+		<chainStep0 type="vector" value="4 3 3 3 3 3 3 3 3 3 3 2 1"/>-->
 		<chainStep1 value="2"/>                                      -->
 		<chainStep2 value="0"/>                                      -->
 
@@ -47,7 +47,7 @@
 		
 		<procAngleMode value="0"/>
 		
-    <chainMin    value="7" />
+    <chainMin    value="8" />
     <chainBorder value="4" />
     <chainAvg    value="3" />
 		
@@ -66,7 +66,7 @@
 		<minRadius type="float" value="5" />
     <minLength type="float" value="0.25" />
     <minMidDist type="float" value="1.0" />
-    <offtracking value="3" />
+    <offtracking value="1" />
     <reverseDir type="bool" value="false" />
     <roueSupport type="bool" value="false" />
 		
@@ -74,7 +74,7 @@
 		<fruitIgnoreSq type="float" value="1" />
 		<chainIgnoreSq type="float" value="4" />
 		
-    <stepLog2 value="1" />
+    <stepLog2 value="3" />
     <yieldCount value="1000" />
 		
     <!--widthDec type="float" value="0.0050000" /-->
@@ -100,9 +100,12 @@
 		<maxDtDist type="float" value="0.077284" /> <!-- 10 km/h => 2.78 m/s => 0.278 m @ 10 fps; square-->
 		<maxDtAngle type="float" value="0.3" />
 		
-		<maxDetectDt value="1000"/>
-		<maxDetectSq type="float" value="1.0"/>
-		<maxDetectSq2 type="float" value="0.01"/>
+		<maxDetectDt value="2000"/>
+		<maxDetectZ0 value="4.2"/> <!-- 15 km/h = 4.2 m/s => re-calculate once every second -->
+		<maxDetectZ1 value="0.2"/> <!--  7 km/h = 1.9 m/s => re-calculate 10 times per second -->
+		<maxDetectMin type="float" value="-0.05"/>
+		<maxDetectMax type="float" value="0.2"/>
+		<maxDetectBack value="2"/>
 		
 		<ploughTransport value="0"/>
 		
