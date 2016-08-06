@@ -14,12 +14,12 @@ end
 ------------------------------------------------------------------------
 -- AutoTractor:detectAngle
 ------------------------------------------------------------------------
-function AutoTractor:detectAngle( smooth, forceDetected )
+function AutoTractor:detectAngle( smooth )
 	if self.acHighPrec == nil then
 		self.acHighPrec = true
 	end
 	
-	local d, a, b = AutoSteeringEngine.processChain( self, smooth, not ( self.acHighPrec ), forceDetected )
+	local d, a, b = AutoSteeringEngine.processChain( self, smooth, not ( self.acHighPrec ) )
 
 	if      self.acTurnStage == 0 
 			and b                <= 0
@@ -38,7 +38,7 @@ function AutoTractor:detectAngle( smooth, forceDetected )
 	if b > 0 and self.acTurnStage == 0 and ASEGlobals.zeroWidth > 0 then 
 		AutoSteeringEngine.reinitToolsWithWidthFactor( self, self.acDimensions.maxLookingAngle, self.acParameters.widthOffset, 0 )			
 		self.acTraceSmoothOffset = AutoSteeringEngine.getTraceLength(self) + 1
-		d, a, b = AutoSteeringEngine.processChain( self, 0, false, forceDetected )
+		d, a, b = AutoSteeringEngine.processChain( self, 0, false )
 		if ASEGlobals.devFeatures > 0 then
 			print("scan again w/o offset: "..tostring(b))
 		end

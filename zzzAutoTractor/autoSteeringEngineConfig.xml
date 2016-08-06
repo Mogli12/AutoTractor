@@ -13,21 +13,21 @@
     <!--angleStep type="degree" value="15" /-->
 		
     <angleStep    type="degree" value="0" />
-    <angleStepInc type="degree" value="3" /> <!-- 27° / 45° -->
-    <angleStepDec type="degree" value="0.2" /> <!-- 0.2 => reduce by 10° per 50m -->
+    <angleStepInc type="degree" value="30" /> <!-- 27° / 45° -->
+    <angleStepDec type="degree" value="1" /> <!-- 0.2 => reduce by 10° per 10m -->
 		<fixAngleStep type="bool" value="true"/>
 		
     <angleFactorInside type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
     <angleFactorNoFix type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
-    <chainDivide0 value="12" />
+    <chainDivide0 value="15" />
     <chainDivide value="8" />
-    <chainDivide2 value="2" />
-		<chainMinStepDist type="float" value="0.2"/>
+    <chainDivide2 value="20" />
+		<chainMinStepDist type="float" value="0.5"/>
 		<staticRoot type="bool" value="true" />
 		
-    <chainLen   type="vector" value="1 1.5 1.5 2 3 3 3 3 3 3 3 3 3"/>--> <!-- with fix attacher: 31 m (6+9+9+9)-->      
-		<chainStep0 type="vector" value="4 3 3 3 3 3 3 3 3 3 3 2 1"/>-->
-		<chainStep1 value="2"/>                                      -->
+    <chainLen   type="vector" value="1 1 1 2 2 2 2 3 3 3 3 3"/> <!-- 3 3 3 3 3"/>--> <!-- with fix attacher: 35 m-->      
+		<chainStep0 type="vector" value="7 6 5 5 5 5 5 5 5 5 5 5 5 4 3 2 1"/>-->
+		<chainStep1 value="1"/>                                      -->
 		<chainStep2 value="0"/>                                      -->
 
     <!--chainLen   type="vector" value="1 1 1 1.5 1.5 1.5 1.5 1.5 1.5 2 2 2 2 2 2 2 2 2"/>--> <!-- with fix attacher: 30 m (4.5+7.5+8+10)-->      
@@ -35,9 +35,9 @@
 		<!--chainStep1 value="3"/>                                                            -->
 		<!--chainStep2 value="0"/>                                                            -->
 		
-    <chain2Len   type="vector" value="3 3 3 3 3 3 5 5 5 5 5 5"/> <!-- with trailer or trailer_low: 48 m (9+9+15+15)-->	
-		<chain2Step0 type="vector" value="3 3 3 3 3 3 3 3 3 3 2 1"/>
-		<chain2Step1 value="2"/>
+    <chain2Len   type="vector" value="3 3 3 3 3 3 3 3 3 3"/> <!-- 3 3 3 3 3 3 3 3 3"/>--> <!-- with trailer or trailer_low: 57 m (6+9+12+15+15)-->	
+		<chain2Step0 type="vector" value="7 6 5 5 5 5 5 5 5 5 5 5 5 5 5 4 3 2 1"/>
+		<chain2Step1 value="1"/>
 		<chain2Step2 value="0"/>
 		
     <!--chain2Len   type="vector" value="3 3 3 3 3 3 3 3 3 3 4 4 4 4 4"/>--> <!-- with trailer or trailer_low: 50 m (9+9+12+20)-->	
@@ -47,8 +47,8 @@
 		
 		<procAngleMode value="0"/>
 		
-    <chainMin    value="8" />
-    <chainBorder value="4" />
+    <chainMin    value="6" />
+    <chainBorder value="6" />
     <chainAvg    value="3" />
 		
 		<chainStart value="1" />
@@ -75,37 +75,40 @@
 		<chainIgnoreSq type="float" value="4" />
 		
     <stepLog2 value="3" />
-    <yieldCount value="1000" />
+    <yieldCount value="2500" />
 		
     <!--widthDec type="float" value="0.0050000" /-->
     <widthDec type="float" value="0.01" />
     <widthMaxDec type="float" value="3" />
 		
 		<zeroAngle  type="bool" value="true" />
-		<zeroAngle2 type="bool" value="false" />
+		<zeroAngle2 type="bool" value="true" />
 		
 		<getIsHired type="bool" value="true" />
 		
 		<widthOffset type="float" value="1" />
-		<testOutside type="float" value="0.2" />
+		<testOutside type="float" value="0.4" />
 		
 		<angleOffset type="degree" value="0" />
 		<smoothFactor type="float" value="0.2" />
 		<smoothMax type="float" value="0" /> <!-- 0.45 -->
-		<limitOutside type="bool" value="true" />
-		<limitInside type="bool" value="true" />
+		<limitOutside type="bool" value="false" />
+		<limitInside type="bool" value="false" />
 
 		<maxDtSumT value="100"/>
-		<maxDtSum  value="0" /> <!-- 10 fps => 100 ms -->
+		<maxDtSum  value="100" /> <!-- 10 fps => 100 ms -->
 		<maxDtDist type="float" value="0.077284" /> <!-- 10 km/h => 2.78 m/s => 0.278 m @ 10 fps; square-->
 		<maxDtAngle type="float" value="0.3" />
 		
 		<maxDetectDt value="2000"/>
-		<maxDetectZ0 value="4.2"/> <!-- 15 km/h = 4.2 m/s => re-calculate once every second -->
-		<maxDetectZ1 value="0.2"/> <!--  7 km/h = 1.9 m/s => re-calculate 10 times per second -->
-		<maxDetectMin type="float" value="-0.05"/>
-		<maxDetectMax type="float" value="0.2"/>
-		<maxDetectBack value="2"/>
+		<maxDetectZ0  type="float" value="4.2"/> <!-- 15 km/h = 4.2 m/s => re-calculate once every second -->
+		<maxDetectZ1  type="float" value="0.2"/> <!--  7 km/h = 1.9 m/s => re-calculate 10 times per second -->
+		<maxDetectZ2  type="float" value="0.0"/> <!-- start of coroutine -->
+		<maxDetectZ3  type="float" value="2.0"/> <!-- shift of coroutine -->
+		<!--maxDetectMin type="float" value="-0.1"/>
+		<maxDetectMax type="float" value="0.3"/-->
+		<maxDetectMin type="float" value="-0.2"/>
+		<maxDetectMax type="float" value="0.5"/>
 		
 		<ploughTransport value="0"/>
 		
@@ -122,4 +125,17 @@
 		<lowerAdvance type="float" value="2" />
 		
 		<borderBuffer type="bool" value="true" />
+		
+		<algorithm value="1"/>
+
+		<pointSteps    type="int"   value="100"/>
+		<pointDist     type="float" value="2.0"/>
+		<pointOutside  type="float" value="1.0"/>
+		<pointInside   type="float" value="1.0"/>
+		<pointTargetIn type="float" value="1.0"/>
+		<pointTargetID type="float" value="0.0"/>
+		<pointCount    type="int"   value="10"/>
+		<pointCountInc type="int"   value="1"/>
+		<pointCountMax type="int"   value="15"/>
+		
 </ASEGlobals>
