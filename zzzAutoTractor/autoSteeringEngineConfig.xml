@@ -20,12 +20,12 @@
     <angleFactorInside type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
     <angleFactorNoFix type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
     <chainDivide0 value="15" />
-    <chainDivide value="8" />
-    <chainDivide2 value="20" />
+    <chainDivide value="5" />
+    <chainDivide2 value="15" />
 		<chainMinStepDist type="float" value="0.5"/>
-		<staticRoot type="bool" value="true" />
+		<staticRoot type="bool" value="false" />
 		
-    <chainLen   type="vector" value="1 1 1 2 2 2 2 3 3 3 3 3"/> <!-- 3 3 3 3 3"/>--> <!-- with fix attacher: 35 m-->      
+    <chainLen   type="vector" value="1.5 1.5 1.7 2 2.3 3 4 4 5 5 5 5"/> <!-- 3 3 3 3 3"/>--> <!-- with fix attacher: 35 m-->      
 		<chainStep0 type="vector" value="7 6 5 5 5 5 5 5 5 5 5 5 5 4 3 2 1"/>-->
 		<chainStep1 value="1"/>                                      -->
 		<chainStep2 value="0"/>                                      -->
@@ -35,7 +35,8 @@
 		<!--chainStep1 value="3"/>                                                            -->
 		<!--chainStep2 value="0"/>                                                            -->
 		
-    <chain2Len   type="vector" value="3 3 3 3 3 3 3 3 3 3"/> <!-- 3 3 3 3 3 3 3 3 3"/>--> <!-- with trailer or trailer_low: 57 m (6+9+12+15+15)-->	
+    <!--chain2Len   type="vector" value="3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3"/>--> <!-- with trailer or trailer_low: 57 m (6+9+12+15+15)-->	
+    <chain2Len   type="vector" value="3 3 3 3 3 3 3 4 5 5 5 5"/> 
 		<chain2Step0 type="vector" value="7 6 5 5 5 5 5 5 5 5 5 5 5 5 5 4 3 2 1"/>
 		<chain2Step1 value="1"/>
 		<chain2Step2 value="0"/>
@@ -47,7 +48,7 @@
 		
 		<procAngleMode value="0"/>
 		
-    <chainMin    value="6" />
+    <chainMin    value="8" />
     <chainBorder value="6" />
     <chainAvg    value="3" />
 		
@@ -113,7 +114,7 @@
 		<ploughTransport value="0"/>
 		
 		<maxSpeed type="float" value="15"/>
-		<maxTurnCheck type="float" value="15"/>		
+		<maxTurnCheck type="float" value="30"/>		
 		<maxToolAngle type="degree" value="60" />
 		<maxToolAngle2 type="degree" value="30" />
 		<maxToolAngleF type="float" value="0.2" />
