@@ -2030,10 +2030,15 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		if self.acParameters.leftAreaActive then 
 			xMin = -xMin
 			xMax = -xMax
+			ta   = -ta
 		end
 		
-		detected, _, border = AutoTractor.detectAngle( self, ASEGlobals.smoothMax )
-		
+		local a2
+		detected, a2, border = AutoTractor.detectAngle( self, ASEGlobals.smoothMax )
+		if not self.acParameters.leftAreaActive then
+			a2 = -a2
+		end
+				
 		local target, minTarget, maxTarget = 90, 82, 98
 		if xMax < -3 then
 			local t = 0
@@ -2050,20 +2055,29 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			else
 				target = maxTarget
 			end
+		elseif a2 > 0 then
+			if xMin > 0 then
+				target = 0.5 * ( target + minTarget )
+			else
+				target = 0.5 * ( target + maxTarget )
+			end
+		elseif xMin > 0 then
+			target = 88
 		end
 		
 		angle  = AutoTractor.getStraighBackwardsAngle( self, target )
 		
-		self:acDebugPrint( "T97: "..degToString( turnAngle ).." "..radToString( ta ).." "..degToString( target ).." "..string.format("%2.3fm %2.3fm / %2.3fm", x, z, -self.acDimensions.toolDistance) )
+		self:acDebugPrint( "T97: "..degToString( turnAngle ).." "..radToString( ta ).." "..radToString( a2 ).." "..degToString( target ).." "..string.format("%2.3fm %2.3fm / %2.3fm", x, z, -self.acDimensions.toolDistance) )
 		
 		if      x < -self.acDimensions.toolDistance 
-			--and math.abs( turnAngle - target + math.deg( ta ) ) < angleOffset
 				and ( detected or x < -15 ) 
+			--and a2 <= 0
+			--and turnAngle <= 90
 				and not fruitsDetected then				
 			if self.turnTimer < 0 then
 				self.acTurnStage = -1
 				self.waitForTurnTime = g_currentMission.time + self.turnTimer;
-				angle = 0
+				angle = a2
 			end
 		else
 			self.turnTimer = self.acDeltaTimeoutRun

@@ -61,8 +61,8 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			turnModeIndexC  = { xml = "acTurnModeC",   tp = "I", default = 1 },
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
-																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.4 },
-																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = 0.8 },
+																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = ASEGlobals.angleFactor },
+																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = ASEGlobals.angleFactorC },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
@@ -1653,9 +1653,6 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 	if not ( self.acParameters.enabled ) then 
 		table.insert( self.acTurnModes, "T" )
 	elseif self.acParameters.upNDown then
-		if revS then
-			table.insert( self.acTurnModes, "T" )
-		end
 		if rev  then
 			if ASEGlobals.enableAUTurn > 0 and sut then
 			  table.insert( self.acTurnModes, "A" )
@@ -1666,6 +1663,9 @@ function AutoTractor:checkAvailableTurnModes( noEventSend )
 					and self.acDimensions.distance < self.acDimensions.radius + 1.5 then
 				table.insert( self.acTurnModes, "Y" )
 			end
+		end
+		if revS then
+			table.insert( self.acTurnModes, "T" )
 		end
 		table.insert( self.acTurnModes, "O" )
 		table.insert( self.acTurnModes, "8" )
