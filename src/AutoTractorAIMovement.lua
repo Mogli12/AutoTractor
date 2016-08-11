@@ -32,17 +32,6 @@ function AutoTractor:detectAngle( smooth )
 		self.acHighPrec = true
 	end
 
---==============================================================				
---==============================================================				
-	
-	if b > 0 and self.acTurnStage == 0 and ASEGlobals.zeroWidth > 0 then 
-		AutoSteeringEngine.reinitToolsWithWidthFactor( self, self.acDimensions.maxLookingAngle, self.acParameters.widthOffset, 0 )			
-		self.acTraceSmoothOffset = AutoSteeringEngine.getTraceLength(self) + 1
-		d, a, b = AutoSteeringEngine.processChain( self, 0, false )
-		if ASEGlobals.devFeatures > 0 then
-			print("scan again w/o offset: "..tostring(b))
-		end
-	end
 	if b > 0 then
 		d = false
 	end
@@ -337,25 +326,30 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			
 		if border > 0 then
 			turn2Outside = true
-			if ASEGlobals.chainIgnoreSq <= 0 or ASEGlobals.chainStart > 1 then
+		--if ASEGlobals.chainIgnoreSq <= 0 or ASEGlobals.chainStart > 1 then
+		--	detected = false
+		--else
+		--	detected = true
+		--	local wx,_,wz = AutoSteeringEngine.getAiWorldPosition( self )
+		--	if self.acTurnInTheMiddle == nil then
+		--		self.acTurnInTheMiddle = { wx = wx, wz = wz }
+		--	else
+		--		local lsq    = Utils.vector2LengthSq( self.acTurnInTheMiddle.wx - wx, self.acTurnInTheMiddle.wz - wz )					
+		--		local maxLsq = ASEGlobals.fruitIgnoreSq
+		--		if      maxLsq < ASEGlobals.chainIgnoreSq
+		--				and ( self.acTurnStage < 0 or not fruitsDetected ) then
+		--			maxLsq = ASEGlobals.chainIgnoreSq
+		--		end
+		--		
+		--		if lsq > maxLsq then
+		--			detected = false
+		--		end
+		--	end
+		--end
+			if AutoSteeringEngine.hasLeftFruits( self ) then
 				detected = false
 			else
 				detected = true
-				local wx,_,wz = AutoSteeringEngine.getAiWorldPosition( self )
-				if self.acTurnInTheMiddle == nil then
-					self.acTurnInTheMiddle = { wx = wx, wz = wz }
-				else
-					local lsq    = Utils.vector2LengthSq( self.acTurnInTheMiddle.wx - wx, self.acTurnInTheMiddle.wz - wz )					
-					local maxLsq = ASEGlobals.fruitIgnoreSq
-					if      maxLsq < ASEGlobals.chainIgnoreSq
-							and ( self.acTurnStage < 0 or not fruitsDetected ) then
-						maxLsq = ASEGlobals.chainIgnoreSq
-					end
-					
-					if lsq > maxLsq then
-						detected = false
-					end
-				end
 			end
 		else
 			turn2Outside           = false

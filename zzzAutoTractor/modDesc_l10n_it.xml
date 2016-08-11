@@ -35,7 +35,7 @@
 		<text name="AUTO_TRACTOR_INVERTED_OFF" text="modo lavoro [normale]" />
 		<text name="AUTO_TRACTOR_WIDTH_OFFSET" text="larghezza offset" />
 		<text name="AUTO_TRACTOR_TURN_OFFSET" text="svolta offset" />
-		<text name="AUTO_TRACTOR_ANGLE_OFFSET" text="angolo svolta" />
+		<text name="AUTO_TRACTOR_SAFETY_FACTOR" text="distanza di sicurezza" />
 		<text name="AUTO_TRACTOR_ERROR" text="errore" />
 		<text name="AUTO_TRACTOR_NEXTTURNSTAGE" text="vai prossimo turno di svolta" />
 		<text name="AUTO_TRACTOR_CP_ON" text="modo courseplay [off]" />

@@ -35,7 +35,7 @@
 		<text name="AUTO_TRACTOR_INVERTED_OFF"				text="Режим работы [нормальный]" />
 		<text name="AUTO_TRACTOR_WIDTH_OFFSET"				text="Ширина смещения" />
 		<text name="AUTO_TRACTOR_TURN_OFFSET"				text="Отступ для разворота" />
-		<text name="AUTO_TRACTOR_ANGLE_OFFSET"				text="Поворот руля" />
+		<text name="AUTO_TRACTOR_SAFETY_FACTOR"				text="Безопасное расстояние" />
 		<text name="AUTO_TRACTOR_ERROR"						text="ошибка" />
 		<text name="AUTO_TRACTOR_NEXTTURNSTAGE"				text="К следующему этапу" />
 		<text name="AUTO_TRACTOR_CP_ON"						text="Режим courseplay [ВЫКЛ]" />

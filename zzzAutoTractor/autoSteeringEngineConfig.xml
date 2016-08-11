@@ -19,33 +19,35 @@
 		
     <angleFactorInside type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
     <angleFactorNoFix type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
-    <chainDivideIn  value="4" />
-    <chainDivideOut value="20" />
+    <chainDivideIn  value="8" />
+    <chainDivideOut value="16" />
+		
 		<staticRoot type="bool" value="false" />
-
-    <!--                                      1 1 2 2 3 3 4 4 5-->
-    <!--                              1 2 4 7 1 5 0 5 0 5 0 5 0-->
-    <!--                              1 2 3 4 5 6 7 8 9 0 1 2 3-->
-    <chainLen    type="vector" value="1 1 2 3 4 4 5 5 5 5 5 5 5"/> 
+		<straightTA type="bool" value="false" />
+		
+    <!--                                        1 1 2 2 3 3 4 4 5-->
+    <!--                              1 2 4 6 8 1 5 0 5 0 5 0 5 0-->
+    <!--                              1 2 3 4 5 6 7 8 9 0 1 2 3 4-->
+    <chainLen    type="vector" value="1 1 2 2 2 3 4 5 5 5 5 5 5 5"/> 
 		<chainStep0  value="3"/>  <!-- initial part of the chain that always rotates    -->                           
-		<chainStep1  value="9"/>  <!-- steps to outside, can be smaller than chainStep2 -->
-		<chainStep2  value="9"/>  <!-- steps to check, increased only if nothing found  -->
-		<chainStep3  value="5"/>  <!-- test outside up to this step                     -->
+		<chainStep1  value="7"/>  <!-- steps to outside, can be smaller than chainStep2 -->
+		<chainStep2  value="11"/> <!-- steps to check, increased only if nothing found  -->
+		<chainStep3  value="99"/> <!-- test outside up to this step                     -->
 	
     <!--                                  1 1 2 2 3 3 4 4 5 6 6-->
     <!--                              3 6 0 5 0 5 0 5 0 5 0 5 0-->
     <!--                              1 2 3 4 5 6 7 8 9 0 1 2 3-->
     <chain2Len   type="vector" value="3 3 4 5 5 5 5 5 5 5 5 5 5"/> 
 		<chain2Step0 value="2"/>
-		<chain2Step1 value="10"/>
-		<chain2Step2 value="10"/>
-		<chain2Step3 value="4"/>    
+		<chain2Step1 value="7"/>
+		<chain2Step2 value="11"/>
+		<chain2Step3 value="99"/>     
 		
-    <chainBorder value="2" />
+    <chainBorder value="1" />
 		<chainStart value="1" />
 		
-		<correctionIn  type="float" value="0.8" />
-		<correctionOut type="float" value="1.2" />
+		<correctionIn  type="float" value="1.0" />
+		<correctionOut type="float" value="1.0" />
 		
 		<shiftFixZ type="bool" value="false" />
 		<colliMask type="bool" value="true" />
@@ -62,15 +64,15 @@
     <reverseDir type="bool" value="false" />
     <roueSupport type="bool" value="false" />
 		
-		<zeroWidth type="bool" value="false" />
-		<fruitIgnoreSq type="float" value="1" />
-		<chainIgnoreSq type="float" value="4" />
+		<fruitIgnoreSq type="float" value="2.25" />
+		<chainIgnoreSq type="float" value="9" />
 		
     <stepLog2 value="2" />
     <yieldCount value="2500" />
 		
     <!--widthDec type="float" value="0.01" /-->
-    <widthDec type="float" value="0"/> 
+    <widthDec type="float" value="0.001"/> 
+		<safetyFactor value="10"/>
     <widthMaxDec type="float" value="3" />
 		
 		<zeroAngle  type="bool" value="true" />
@@ -79,13 +81,12 @@
 		<getIsHired type="bool" value="true" />
 		
 		<widthOffset type="float" value="1" />
-		<testOutside type="float" value="0.4" />
+		<testOutside type="float" value="0.25" />
 		
-		<angleOffset type="degree" value="0" />
 		<smoothFactor type="float" value="0.2" />
 		<smoothMax type="float" value="0" /> <!-- 0.45 -->
-		<limitOutside type="bool" value="false" />
-		<limitInside type="bool" value="false" />
+		<limitOutside type="bool" value="true" />
+		<limitInside type="bool" value="true" />
 
 		<maxDtSumT value="100"/>
 		<maxDtSum  value="100" /> <!-- 10 fps => 100 ms -->
@@ -118,7 +119,4 @@
 		
 		<borderBuffer type="bool" value="true" />
 		
-		<angleFactor  type="float" value="0.4" />
-		<angleFactorC type="float" value="0.8" />
-
 </ASEGlobals>

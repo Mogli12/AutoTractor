@@ -61,8 +61,7 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			turnModeIndexC  = { xml = "acTurnModeC",   tp = "I", default = 1 },
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
-																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = ASEGlobals.angleFactor },
-																			angleFactorC    = { xml = "acAngleFactorC",tp = "F", default = ASEGlobals.angleFactorC },
+																			safetyFactor    = { xml = "acSafetyFactor",tp = "I", default = ASEGlobals.safetyFactor },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
@@ -231,33 +230,33 @@ function AutoTractor:initMogliHud()
 		AutoTractorHud.addButton(self, nil, nil, AutoTractor.test4, nil, mogliCols,4, "Points" );
 	end
 
-	AutoTractorHud.addButton(self, "dds/off.dds",            "dds/on.dds",           AutoTractor.onStart,       AutoTractor.evalStart,     1,1, "HireEmployee", "DismissEmployee", nil, AutoTractor.getStartImage );
-	AutoTractorHud.addButton(self, "dds/ai_combine.dds",     "dds/auto_combine.dds", AutoTractor.onEnable,      AutoTractor.evalEnable,    2,1, "AUTO_TRACTOR_STOP", "AUTO_TRACTOR_START" );
-	AutoTractorHud.addButton(self, "dds/no_uturn2.dds",      "dds/uturn.dds",        AutoTractor.setUTurn,      AutoTractor.evalUTurn,     3,1, "AUTO_TRACTOR_UTURN_OFF", "AUTO_TRACTOR_UTURN_ON") ;
-	AutoTractorHud.addButton(self, "dds/next.dds",           "dds/no_next.dds",      AutoTractor.nextTurnStage, AutoTractor.evalTurnStage, 4,1, "AUTO_TRACTOR_NEXTTURNSTAGE", nil );
-	AutoTractorHud.addButton(self, "dds/no_pause.dds",       "dds/pause.dds",        AutoTractor.setPause,      AutoTractor.evalPause,     5,1, "AUTO_TRACTOR_PAUSE_OFF", "AUTO_TRACTOR_PAUSE_ON", nil, AutoTractor.getPauseImage );
-	
-	AutoTractorHud.addButton(self, "dds/noHeadland.dds",     "dds/headland.dds",     AutoTractor.setHeadland,   AutoTractor.evalHeadland,  1,2, "AUTO_TRACTOR_HEADLAND_ON", "AUTO_TRACTOR_HEADLAND_OFF" );
-	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setBigHeadland,nil,                       2,2, "AUTO_TRACTOR_HEADLAND", nil, AutoTractor.getBigHeadlandText, AutoTractor.getBigHeadlandImage );
-	AutoTractorHud.addButton(self, "dds/collision_off.dds",  "dds/collision_on.dds", AutoTractor.setCollision,  AutoTractor.evalCollision, 3,2, "AUTO_TRACTOR_COLLISION_OFF", "AUTO_TRACTOR_COLLISION_ON" );
-	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setTurnMode,   nil,                       4,2, nil, nil, AutoTractor.getTurnModeText, AutoTractor.getTurnModeImage );
-	AutoTractorHud.addButton(self, "dds/hire_off.dds",       "dds/hire_on.dds",      AutoTractor.setIsHired,    AutoTractor.evalIsHired,   5,2, "AUTO_TRACTOR_HIRE_OFF", "AUTO_TRACTOR_HIRE_ON");
-	
-	AutoTractorHud.addButton(self, "dds/inactive_left.dds",  "dds/active_left.dds",  AutoTractor.setAreaLeft,   AutoTractor.evalAreaLeft,  1,3, "AUTO_TRACTOR_ACTIVESIDERIGHT", "AUTO_TRACTOR_ACTIVESIDELEFT" );
-	AutoTractorHud.addButton(self, "dds/inactive_right.dds", "dds/active_right.dds", AutoTractor.setAreaRight,  AutoTractor.evalAreaRight, 2,3, "AUTO_TRACTOR_ACTIVESIDELEFT", "AUTO_TRACTOR_ACTIVESIDERIGHT" );	
-	AutoTractorHud.addButton(self, "dds/angle_plus.dds",     nil,                    AutoTractor.setAngleUp,    AutoTractor.evalAngleUp,   3,3, "AUTO_TRACTOR_ANGLE_OFFSET", nil, AutoTractor.getAngleFactor);
-	AutoTractorHud.addButton(self, "dds/angle_minus.dds",    nil,                    AutoTractor.setAngleDown,  AutoTractor.evalAngleDown, 4,3, "AUTO_TRACTOR_ANGLE_OFFSET", nil, AutoTractor.getAngleFactor);
+	AutoTractorHud.addButton(self, "dds/off.dds",            "dds/on.dds",           AutoTractor.onStart,       AutoTractor.evalStart,      1,1, "HireEmployee", "DismissEmployee", nil, AutoTractor.getStartImage );
+	AutoTractorHud.addButton(self, "dds/ai_combine.dds",     "dds/auto_combine.dds", AutoTractor.onEnable,      AutoTractor.evalEnable,     2,1, "AUTO_TRACTOR_STOP", "AUTO_TRACTOR_START" );
+	AutoTractorHud.addButton(self, "dds/no_uturn2.dds",      "dds/uturn.dds",        AutoTractor.setUTurn,      AutoTractor.evalUTurn,      3,1, "AUTO_TRACTOR_UTURN_OFF", "AUTO_TRACTOR_UTURN_ON") ;
+	AutoTractorHud.addButton(self, "dds/next.dds",           "dds/no_next.dds",      AutoTractor.nextTurnStage, AutoTractor.evalTurnStage,  4,1, "AUTO_TRACTOR_NEXTTURNSTAGE", nil );
+	AutoTractorHud.addButton(self, "dds/no_pause.dds",       "dds/pause.dds",        AutoTractor.setPause,      AutoTractor.evalPause,      5,1, "AUTO_TRACTOR_PAUSE_OFF", "AUTO_TRACTOR_PAUSE_ON", nil, AutoTractor.getPauseImage );
+
+	AutoTractorHud.addButton(self, "dds/noHeadland.dds",     "dds/headland.dds",     AutoTractor.setHeadland,   AutoTractor.evalHeadland,   1,2, "AUTO_TRACTOR_HEADLAND_ON", "AUTO_TRACTOR_HEADLAND_OFF" );
+	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setBigHeadland,nil,                        2,2, "AUTO_TRACTOR_HEADLAND", nil, AutoTractor.getBigHeadlandText, AutoTractor.getBigHeadlandImage );
+	AutoTractorHud.addButton(self, "dds/collision_off.dds",  "dds/collision_on.dds", AutoTractor.setCollision,  AutoTractor.evalCollision,  3,2, "AUTO_TRACTOR_COLLISION_OFF", "AUTO_TRACTOR_COLLISION_ON" );
+	AutoTractorHud.addButton(self, nil,                      nil,                    AutoTractor.setTurnMode,   nil,                        4,2, nil, nil, AutoTractor.getTurnModeText, AutoTractor.getTurnModeImage );
+	AutoTractorHud.addButton(self, "dds/hire_off.dds",       "dds/hire_on.dds",      AutoTractor.setIsHired,    AutoTractor.evalIsHired,    5,2, "AUTO_TRACTOR_HIRE_OFF", "AUTO_TRACTOR_HIRE_ON");
+
+	AutoTractorHud.addButton(self, "dds/inactive_left.dds",  "dds/active_left.dds",  AutoTractor.setAreaLeft,   AutoTractor.evalAreaLeft,   1,3, "AUTO_TRACTOR_ACTIVESIDERIGHT", "AUTO_TRACTOR_ACTIVESIDELEFT" );
+	AutoTractorHud.addButton(self, "dds/inactive_right.dds", "dds/active_right.dds", AutoTractor.setAreaRight,  AutoTractor.evalAreaRight,  2,3, "AUTO_TRACTOR_ACTIVESIDELEFT", "AUTO_TRACTOR_ACTIVESIDERIGHT" );	
+	AutoTractorHud.addButton(self, "dds/safety_minus.dds",   "dds/safety_ina.dds",   AutoTractor.setSafetyDown, AutoTractor.evalSafetyDown, 3,3, "AUTO_TRACTOR_SAFETY_FACTOR", nil, AutoTractor.getSafetyFactor);
+	AutoTractorHud.addButton(self, "dds/safety_plus.dds",    "dds/safety_ina.dds",   AutoTractor.setSafetyUp,   AutoTractor.evalSafetyUp,   4,3, "AUTO_TRACTOR_SAFETY_FACTOR", nil, AutoTractor.getSafetyFactor);
 	AutoTractorHud.addButton(self, "dds/noFrontPacker.dds",  "dds/frontPacker.dds",  AutoTractor.setFrontPacker,AutoTractor.evalFrontPacker,5,3,"AUTO_TRACTOR_FRONT_PACKER_OFF", "AUTO_TRACTOR_FRONT_PACKER_ON" );
 
-	AutoTractorHud.addButton(self, "dds/bigger.dds",         nil,                    AutoTractor.setWidthUp,    nil,                       1,4, "AUTO_TRACTOR_WIDTH_OFFSET", nil, AutoTractor.getWidth);
-	AutoTractorHud.addButton(self, "dds/smaller.dds",        nil,                    AutoTractor.setWidthDown,  nil,                       2,4, "AUTO_TRACTOR_WIDTH_OFFSET", nil, AutoTractor.getWidth);
-	AutoTractorHud.addButton(self, "dds/forward.dds",        nil,                    AutoTractor.setForward,    nil,                       3,4, "AUTO_TRACTOR_TURN_OFFSET", nil, AutoTractor.getTurnOffset);
-	AutoTractorHud.addButton(self, "dds/backward.dds",       nil,                    AutoTractor.setBackward,   nil,                       4,4, "AUTO_TRACTOR_TURN_OFFSET", nil, AutoTractor.getTurnOffset);
-	AutoTractorHud.addButton(self, "dds/notInverted.dds",    "dds/inverted.dds",     AutoTractor.setInverted,   AutoTractor.evalInverted,  5,4, "AUTO_TRACTOR_INVERTED_OFF", "AUTO_TRACTOR_INVERTED_ON" );
+	AutoTractorHud.addButton(self, "dds/bigger.dds",         nil,                    AutoTractor.setWidthUp,    nil,                        1,4, "AUTO_TRACTOR_WIDTH_OFFSET", nil, AutoTractor.getWidth);
+	AutoTractorHud.addButton(self, "dds/smaller.dds",        nil,                    AutoTractor.setWidthDown,  nil,                        2,4, "AUTO_TRACTOR_WIDTH_OFFSET", nil, AutoTractor.getWidth);
+	AutoTractorHud.addButton(self, "dds/forward.dds",        nil,                    AutoTractor.setForward,    nil,                        3,4, "AUTO_TRACTOR_TURN_OFFSET", nil, AutoTractor.getTurnOffset);
+	AutoTractorHud.addButton(self, "dds/backward.dds",       nil,                    AutoTractor.setBackward,   nil,                        4,4, "AUTO_TRACTOR_TURN_OFFSET", nil, AutoTractor.getTurnOffset);
+	AutoTractorHud.addButton(self, "dds/notInverted.dds",    "dds/inverted.dds",     AutoTractor.setInverted,   AutoTractor.evalInverted,   5,4, "AUTO_TRACTOR_INVERTED_OFF", "AUTO_TRACTOR_INVERTED_ON" );
 
-	AutoTractorHud.addButton(self, "dds/auto_steer_off.dds", "dds/auto_steer_on.dds",AutoTractor.onAutoSteer,   AutoTractor.evalAutoSteer, 6,1, "AUTO_TRACTOR_STEER_ON", "AUTO_TRACTOR_STEER_OFF" );
-	AutoTractorHud.addButton(self, "dds/raise_impl.dds",     "dds/lower_impl.dds",   AutoTractor.onRaiseImpl,   AutoTractor.evalRaiseImpl, 6,2, "AUTO_TRACTOR_STEER_LOWER", "AUTO_TRACTOR_STEER_RAISE", nil, AutoTractor.getRaiseImplImage );
-	AutoTractorHud.addButton(self, "dds/refresh.dds",        nil,                    AutoTractor.onMagic,       nil,                       6,3, nil, nil );
+	AutoTractorHud.addButton(self, "dds/auto_steer_off.dds", "dds/auto_steer_on.dds",AutoTractor.onAutoSteer,   AutoTractor.evalAutoSteer,  6,1, "AUTO_TRACTOR_STEER_ON", "AUTO_TRACTOR_STEER_OFF" );
+	AutoTractorHud.addButton(self, "dds/raise_impl.dds",     "dds/lower_impl.dds",   AutoTractor.onRaiseImpl,   AutoTractor.evalRaiseImpl,  6,2, "AUTO_TRACTOR_STEER_LOWER", "AUTO_TRACTOR_STEER_RAISE", nil, AutoTractor.getRaiseImplImage );
+	AutoTractorHud.addButton(self, "dds/refresh.dds",        nil,                    AutoTractor.onMagic,       nil,                        6,3, nil, nil );
 
 	
 	if type( self.atHud ) == "table" then
@@ -536,13 +535,6 @@ function AutoTractor:getTurnOffset(old)
 	return new
 end
 
-function AutoTractor:getAngleFactorComp()
-	if self.acParameters ~= nil and	not ( self.acParameters.upNDown ) then
-		return "angleFactorC"
-	end
-	return "angleFactor"
-end
-
 function AutoTractor:getTurnIndexComp()
 	if self.acParameters ~= nil and	not ( self.acParameters.upNDown ) then
 		return "turnModeIndexC"
@@ -550,30 +542,28 @@ function AutoTractor:getTurnIndexComp()
 	return "turnModeIndex"
 end
 
-function AutoTractor:evalAngleUp()
+function AutoTractor:evalSafetyUp()
 	if not self.acParameters.enabled then 
 		return true 
 	end 
-	local enabled = self.acParameters[AutoTractor.getAngleFactorComp(self)] <= 0.95;
+	local enabled = self.acParameters.safetyFactor < 100
 	return enabled
 end
 
-function AutoTractor:evalAngleDown()
+function AutoTractor:evalSafetyDown()
 	if not self.acParameters.enabled then 
 		return true 
 	end 
-	local enabled = self.acParameters[AutoTractor.getAngleFactorComp(self)] >= 0.1;
+	local enabled = self.acParameters.safetyFactor > 0
 	return enabled
 end
 
-function AutoTractor:setAngleUp(enabled)
-	local c = AutoTractor.getAngleFactorComp(self)
-	if enabled then self.acParameters[c] = self.acParameters[c] + 0.05 end
+function AutoTractor:setSafetyUp(enabled)
+	if enabled then self.acParameters.safetyFactor = math.min(100,self.acParameters.safetyFactor + 1 ) end
 end
 
-function AutoTractor:setAngleDown(enabled)
-	local c = AutoTractor.getAngleFactorComp(self)
-	if enabled then self.acParameters[c] = self.acParameters[c] - 0.05 end
+function AutoTractor:setSafetyDown(enabled)
+	if enabled then self.acParameters.safetyFactor = math.max( 0, self.acParameters.safetyFactor - 1 ) end
 end
 
 function AutoTractor:getMaxLookingAngleValue( noScale )
@@ -583,22 +573,11 @@ function AutoTractor:getMaxLookingAngleValue( noScale )
 	
 	local ml = Utils.getNoNil( self.acDimensions.maxSteeringAngle, ASEGlobals.maxLooking )
 	
-	if      self.acParameters                                       ~= nil
-			and self.acParameters[AutoTractor.getAngleFactorComp(self)] ~= nil then
-		ml  = math.max( ml * self.acParameters[AutoTractor.getAngleFactorComp(self)], 0.0174533 )
-	end
-	
 	return ml
 end
 
-function AutoTractor:getAngleFactor(old)
-	local dg = math.deg(AutoTractor.getMaxLookingAngleValue( self ))
-	local pr = 0
-	if      self.acParameters                                       ~= nil
-			and self.acParameters[AutoTractor.getAngleFactorComp(self)] ~= nil then
-		pr = 100 * self.acParameters[AutoTractor.getAngleFactorComp(self)]
-	end
-	new = string.format(old..": %2.1f° / %3.0f%%",dg,pr);
+function AutoTractor:getSafetyFactor(old)
+	new = string.format(old..": %3d%%",self.acParameters.safetyFactor);
 	return new
 end
 
@@ -1759,7 +1738,7 @@ function AutoTractor:checkState( onlyMaxLooking )
 	--end
 	
 	if self.acParameters.enabled then 
-		AutoSteeringEngine.initTools( self, maxLooking, self.acParameters.leftAreaActive, self.acParameters.widthOffset, h, c, self.acTurnMode );
+		AutoSteeringEngine.initTools( self, maxLooking, self.acParameters.leftAreaActive, self.acParameters.widthOffset, self.acParameters.safetyFactor, h, c, self.acTurnMode );
 	end
 end
 
