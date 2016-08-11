@@ -4649,16 +4649,19 @@ function AutoSteeringEngine.initTurnVector( vehicle, uTurn, turn2Outside )
 			local t = offsetOutside * ASEGlobals.testOutside
 
 			for i = 0,40 do
-				xw0 = vehicle.aseDirectionBeforeTurn.ox +f*i*dxx
-				zw0 = vehicle.aseDirectionBeforeTurn.oz +f*i*dzx
+				xw0 = vehicle.aseDirectionBeforeTurn.ox + f * i * dxx
+				zw0 = vehicle.aseDirectionBeforeTurn.oz + f * t * dzx
 				
 				xw1 = xw0 - t * dxx - dist * dxz
 				zw1 = zw0 - t * dzx - dist * dzz
-				xw2 = xw0 - t * dxx + dxz
-				zw2 = zw0 - t * dzx + dzz
+				xw2 = xw0 - t * dxx
+				zw2 = zw0 - t * dzx
 				if vehicle.aseHeadland > 0 then
 					xw2 = xw2 - ASEGlobals.ignoreDist * dxz
 					zw2 = zw2 - ASEGlobals.ignoreDist * dzz
+				else
+					xw2 = xw2 + dxz
+					zw2 = zw2 + dzz
 				end
 
 				if ASEGlobals.showTrace > 0 and i == 1 then

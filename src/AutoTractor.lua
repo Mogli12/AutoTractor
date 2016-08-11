@@ -546,7 +546,7 @@ function AutoTractor:evalSafetyUp()
 	if not self.acParameters.enabled then 
 		return true 
 	end 
-	local enabled = self.acParameters.safetyFactor < 100
+	local enabled = self.acParameters.safetyFactor < 10
 	return enabled
 end
 
@@ -559,7 +559,7 @@ function AutoTractor:evalSafetyDown()
 end
 
 function AutoTractor:setSafetyUp(enabled)
-	if enabled then self.acParameters.safetyFactor = math.min(100,self.acParameters.safetyFactor + 1 ) end
+	if enabled then self.acParameters.safetyFactor = math.min(10, self.acParameters.safetyFactor + 1 ) end
 end
 
 function AutoTractor:setSafetyDown(enabled)
@@ -577,7 +577,7 @@ function AutoTractor:getMaxLookingAngleValue( noScale )
 end
 
 function AutoTractor:getSafetyFactor(old)
-	new = string.format(old..": %3d%%",self.acParameters.safetyFactor);
+	new = string.format(old..": %3d%%",self.acParameters.safetyFactor*10);
 	return new
 end
 
