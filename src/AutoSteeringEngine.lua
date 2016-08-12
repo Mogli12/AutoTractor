@@ -262,7 +262,7 @@ end
 ------------------------------------------------------------------------
 -- processChain
 ------------------------------------------------------------------------
-function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer )
+function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 
 	if vehicle.aseToolParams == nil or table.getn( vehicle.aseToolParams ) < 1 then
 		return false, 0,0
@@ -276,12 +276,17 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer )
 	AutoSteeringEngine.initSteering( vehicle )	
 	vehicle.acIamDetecting = true
 
-	vehicle.aseChain.valid  = false
-	vehicle.aseChain.smooth = nil
+	vehicle.aseChain.valid   = false
+	vehicle.aseChain.smooth  = nil
+	vehicle.aseChain.inField = false
 	
 	if s < 1 then
 		vehicle.aseChain.smooth      = s
 		vehicle.aseChain.angleFactor = vehicle.aseChain.angleFactor * vehicle.aseChain.smooth
+	end
+	
+	if inField then
+		vehicle.aseChain.inField = true
 	end
 	
 	if ASEGlobals.collectCbr > 0 then
@@ -309,9 +314,7 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer )
 	
 	vehicle.aseProcessChainInfo = ""
 		
-	if      vehicle.acTurnStage   ~= nil 
-			and ( vehicle.acTurnStage == 0 
-				 or vehicle.acTurnStage == 199 ) 
+	if      vehicle.aseChain.inField
 			and vehicle.aseChain.chainStep1 > 0 
 			and vehicle.aseChain.chainStep1 < indexMax 
 			and vehicle.aseMaxLooking > 0.1 then
@@ -404,7 +407,7 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer )
 			if     bi <= 0 and bo <= 0 then
 				-- there is nothing
 				vehicle.aseProcessChainInfo = "nothing found"
-				best  = { -1.4, indexMax, indexMax, 0, 0 }
+				best  = { -1.4, indexMax, indexMax, -1, 0 }
 			else
 				-- get closer to border
 				detected = true
@@ -495,7 +498,7 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer )
 		end
 	end
 	
-	AutoSteeringEngine.processIsAtEnd( vehicle )	
+	AutoSteeringEngine.processIsAtEnd( vehicle, a )	
 --print(tostring(best[1]).." / "..tostring(j).." / "..tostring(indexMax).." / "..tostring(a).." / "..tostring(math.floor( math.deg( angle ) + 0.5 ) ).." / "..tostring(border).." / "..tostring(detected))
 	
 	vehicle.aseLastIndexMax = indexMax 	
@@ -586,11 +589,11 @@ end
 ------------------------------------------------------------------------
 -- processIsAtEnd
 ------------------------------------------------------------------------
-function AutoSteeringEngine.processIsAtEnd( vehicle )		
+function AutoSteeringEngine.processIsAtEnd( vehicle, a )		
 
 	vehicle.aseChain.isAtEnd = true
 
-	local cs = math.max( vehicle.aseChain.chainStep0, 1 ) + 2
+	local cs = math.min( math.max( vehicle.aseChain.chainStep0, 1 ) + 2, vehicle.aseChain.chainMax )
 	
 	for i=vehicle.aseChain.chainMax,cs,-1 do 
 		if vehicle.aseChain.nodes[i].detected then
@@ -600,6 +603,117 @@ function AutoSteeringEngine.processIsAtEnd( vehicle )
 		if vehicle.aseChain.nodes[i].distance < ASEGlobals.ignoreDist - math.max( 0, vehicle.aseDistance ) then
 			break
 		end
+	end
+	if vehicle.aseChain.isAtEnd and AutoSteeringEngine.hasFruitsInFront( vehicle, cs ) then
+		vehicle.aseChain.isAtEnd = false
+	end
+	
+	if      vehicle.aseChain.inField 
+			and not vehicle.aseChain.isAtEnd
+			and AutoSteeringEngine.hasFruits( vehicle, -1 ) then
+		local x,_,z = AutoSteeringEngine.getAiWorldPosition( vehicle )
+		local lsq
+		if vehicle.aseChain.offsetWx == nil then
+			vehicle.aseChain.offsetWx = x
+			vehicle.aseChain.offsetWz = z
+			lsq = 0
+		else
+			lsq = ( vehicle.aseChain.offsetWx - x )^2 + ( vehicle.aseChain.offsetWz - z )^2
+		end
+		if type( vehicle.aseChain.angleStatistics ) ~= "table" then
+			vehicle.aseChain.angleStatistics = {}
+		end
+		
+		if lsq > vehicle.aseChain.nodes[vehicle.aseChain.chainStep0+1].distance^2 then
+			vehicle.aseChain.offsetWx = x
+			vehicle.aseChain.offsetWz = z
+			vehicle.aseChain.angleSum = nil
+			local tmp2 = table.getn( vehicle.aseChain.angleStatistics )
+			if tmp2 > 1000 then
+				local tmp1 = {}
+				for i=1,1000 do
+					table.insert(tmp1,vehicle.aseChain.angleStatistics[tmp2-1000+i])
+				end
+				vehicle.aseChain.angleStatistics = tmp1
+			end
+			
+			local steps        = 80
+			local stepDist     = 2/steps
+			local first        = math.max( 1, 0.1 / stepDist )
+			local offsetInside = stepDist
+			
+			if vehicle.aseLRSwitch	then
+				offsetInside = -offsetInside
+			end
+			
+			local dist = nil
+			for l=first,steps do
+				local b, t = 0, 0
+				for j,toolParam in pairs(vehicle.aseToolParams) do
+					for i=1,vehicle.aseChain.chainStep0 do
+						local xp,_,zp = AutoSteeringEngine.getChainPoint( vehicle, i, toolParam )		
+						local xc,_,zc = AutoSteeringEngine.getChainPoint( vehicle, i+1, toolParam )		
+						local bj, tj  = AutoSteeringEngine.getFruitArea( vehicle, xp, zp, xc, zc, l * offsetInside, toolParam.i )			
+						b = b + bj
+						t = t + tj
+					end
+				end
+				
+				if b > 0 then
+					dist = l * stepDist
+					break
+				end
+			end
+			
+			if     dist == nil then
+				vehicle.aseChain.offsetAvg = nil
+			else
+				if vehicle.aseChain.offsetAvg == nil then
+					vehicle.aseChain.offsetAvg = dist 
+				else
+					vehicle.aseChain.offsetAvg = vehicle.aseChain.offsetAvg + 0.5 * ( dist - vehicle.aseChain.offsetAvg )
+				end			
+				
+				local target = vehicle.aseOffsetStd
+				if     vehicle.aseChain.offsetAvg > target + stepDist then
+					vehicle.aseSafetyFactor = math.max(  0, vehicle.aseSafetyFactor - 0.1 )
+				elseif vehicle.aseChain.offsetAvg < target - stepDist then
+					vehicle.aseSafetyFactor = math.min( 10, vehicle.aseSafetyFactor + 0.1 )
+				end
+			end			
+		end
+		
+		table.insert(vehicle.aseChain.angleStatistics,a)
+		
+		if vehicle.aseChain.angleSum == nil then
+			vehicle.aseChain.angleSum   = 0
+			vehicle.aseChain.angleCnt   = 0
+			vehicle.aseChain.angleSumSq = 0
+			for _,a in pairs(vehicle.aseChain.angleStatistics) do
+				vehicle.aseChain.angleSum   = vehicle.aseChain.angleSum + a
+				vehicle.aseChain.angleCnt   = vehicle.aseChain.angleCnt + 1
+				vehicle.aseChain.angleSumSq = vehicle.aseChain.angleSumSq + a*a
+			end
+		else
+			vehicle.aseChain.angleSum   = vehicle.aseChain.angleSum + a
+			vehicle.aseChain.angleCnt   = vehicle.aseChain.angleCnt + 1
+			vehicle.aseChain.angleSumSq = vehicle.aseChain.angleSumSq + a*a
+		end
+		
+		vehicle.aseChain.angleAvg = vehicle.aseChain.angleSum / vehicle.aseChain.angleCnt
+		vehicle.aseChain.angleVar = vehicle.aseChain.angleSumSq - vehicle.aseChain.angleCnt * vehicle.aseChain.angleAvg * vehicle.aseChain.angleAvg
+		
+		-- rounding!!!
+		if vehicle.aseChain.angleCnt <= 1 or vehicle.aseChain.angleVar <= 0 then
+			vehicle.aseChain.angleStd = 0
+		else
+			vehicle.aseChain.angleStd = math.sqrt( vehicle.aseChain.angleVar / ( vehicle.aseChain.angleCnt - 1 ) )
+		end
+		vehicle.aseSafetyFactor = math.max( vehicle.aseChain.angleStd * 10, vehicle.aseSafetyFactor )
+		
+	elseif vehicle.aseChain.offsetWx ~= nil and not vehicle.aseChain.inField then
+		vehicle.aseChain.offsetWx = nil
+		vehicle.aseChain.offsetWz = nil
 	end
 	
 	return vehicle.aseChain.isAtEnd 
@@ -657,32 +771,16 @@ end
 ------------------------------------------------------------------------
 -- getWidthOffset
 ------------------------------------------------------------------------
+function AutoSteeringEngine.getWidthOffsetStd( vehicle, width )
+	local scale  = Utils.getNoNil( vehicle.aiTurnWidthScale, 0.95 )
+	local diff   = Utils.getNoNil( vehicle.aiTurnWidthMaxDifference, 0.5 )
+	return math.max( ASEGlobals.testOutside, 0.5 * ( width - math.max(width * scale, width - diff) ) )
+end
+------------------------------------------------------------------------
+-- getWidthOffset
+------------------------------------------------------------------------
 function AutoSteeringEngine.getWidthOffset( vehicle, width, widthOffset, widthFactor )
-	local offset = 0
-	if ASEGlobals.widthOffset > 0 then 
-		local scale  = Utils.getNoNil( vehicle.aiTurnWidthScale, 0.95 )
-		local diff   = Utils.getNoNil( vehicle.aiTurnWidthMaxDifference, 0.5 )
-		offset = ASEGlobals.widthOffset * 0.5 * ( width - math.max(width * scale, width - diff) )
-		if widthFactor ~= nil then
-			offset = widthFactor * offset
-		end
-	end
-	if widthOffset == nil then
-		if ASEGlobals.testOutside > 0 then
-			offset = math.max( 0, offset - ASEGlobals.testOutside )
-		end
-	elseif widthOffset > 0 then
-		if ASEGlobals.testOutside > 0 then
-			offset = math.max( 0, offset - ASEGlobals.testOutside )
-		end
-		offset = offset - widthOffset
-	else
-		offset = offset - widthOffset
-		if ASEGlobals.testOutside > 0 then
-			offset = math.max( 0, offset - ASEGlobals.testOutside )
-		end
-	end
-	return offset
+	return widthOffset
 end
 
 ------------------------------------------------------------------------
@@ -765,7 +863,8 @@ function AutoSteeringEngine.checkTools( vehicle, reset )
 				if zb > zb1 then zb = zb1 end
 				
 			end
-			local wo = AutoSteeringEngine.getWidthOffset( vehicle, dx )
+		--local wo = AutoSteeringEngine.getWidthOffsetStd( vehicle, dx )
+			local wo = vehicle.aseOffset
 			dx = 0.5 * dx - wo
 		end
 	end
@@ -824,7 +923,7 @@ function AutoSteeringEngine.getWantedSpeed( vehicle, speedLevel )
 	elseif speedLevel == 0 then
 		wantedSpeed = 0
 	elseif speedLevel == 1 then
-		wantedSpeed  = 0.667 * vehicle.aseWantedSpeed
+		wantedSpeed  = math.max( 7, 0.667 * vehicle.aseWantedSpeed )
 	end
 				
 	return wantedSpeed
@@ -850,7 +949,7 @@ end
 ------------------------------------------------------------------------
 -- initTools
 ------------------------------------------------------------------------
-function AutoSteeringEngine.initTools( vehicle, maxLooking, leftActive, widthOffset, widthDecFactor, headlandDist, collisionDist, turnMode )
+function AutoSteeringEngine.initTools( vehicle, maxLooking, leftActive, widthOffset, safetyFactor, headlandDist, collisionDist, turnMode )
 
 	isTurnMode7 = ( vehicle.aseTurnMode == "7" )
 	
@@ -866,7 +965,11 @@ function AutoSteeringEngine.initTools( vehicle, maxLooking, leftActive, widthOff
 	
 	vehicle.aseIsTurnMode7 = isTurnMode7
 	
-	vehicle.aseWidthDec    = ASEGlobals.widthDec * widthDecFactor
+--vehicle.aseWidthDec    = ASEGlobals.widthDec * safetyFactor
+	if vehicle.aseSafetyFactor == nil then
+		vehicle.aseSafetyFactor = safetyFactor
+	end
+	vehicle.aseWidthDec    = ASEGlobals.widthDec * vehicle.aseSafetyFactor
 	vehicle.aseLRSwitch    = leftActive
 	vehicle.aseHeadland    = headlandDist
 	vehicle.aseTurnMode    = turnMode
@@ -1358,7 +1461,7 @@ function AutoSteeringEngine.isAttachedImplement( vehicle, object )
 end
 
 ------------------------------------------------------------------------
--- hasFruits
+-- hasLeftFruits
 ------------------------------------------------------------------------
 function AutoSteeringEngine.hasLeftFruits( vehicle )
 	
@@ -1450,6 +1553,103 @@ function AutoSteeringEngine.hasLeftFruits( vehicle )
 						return true
 					end			
 					vehicle.aseFruitAreas[vehicle.aseToolCount+i] = { lx1, lz1, lx2, lz2, lx3, lz3, lx4, lz4, false }
+				end			
+			end			
+		end
+	end
+	
+	return false
+end
+
+------------------------------------------------------------------------
+-- hasLeftFruits
+------------------------------------------------------------------------
+function AutoSteeringEngine.hasFruitsInFront( vehicle, cs )
+	
+	if not vehicle.isServer then return false end
+	
+	if cs == nil then cs = 2 end
+	
+	if      vehicle.aseChain      ~= nil 
+			and vehicle.aseLRSwitch   ~= nil 
+			and vehicle.aseToolCount  ~= nil 
+			and vehicle.aseToolCount  >= 1 
+			and vehicle.aseToolParams ~= nil 
+			and vehicle.aseToolCount  == table.getn( vehicle.aseToolParams ) then
+		for i = 1,vehicle.aseToolCount do	
+			local toolParam = vehicle.aseToolParams[i]
+			local tool      = vehicle.aseTools[toolParam.i]				
+			local back      = toolParam.zReal + vehicle.aseChain.nodes[cs].distance 
+			local front     = back + 10
+			
+			local dx,dz
+			if tool.steeringAxleNode == nil then
+				dx,_,dz = localDirectionToWorld( vehicle.aseChain.refNode, 0, 0, 1 )
+			elseif tool.invert then
+				dx,_,dz = localDirectionToWorld( tool.steeringAxleNode, 0, 0, -1 )
+			else
+				dx,_,dz = localDirectionToWorld( tool.steeringAxleNode, 0, 0, 1 )
+			end
+
+			local w = toolParam.width * 0.8
+			local ofs, idx			
+			if vehicle.aseLRSwitch	then
+				ofs = 0.125*w-toolParam.offset 
+				idx = toolParam.nodeLeft 
+			else
+				ofs = toolParam.offset-0.125*w
+				idx = toolParam.nodeRight
+			end
+			
+			if vehicle.aseLRSwitch then
+				w = -w
+			end
+
+			local xw1,y,zw1 = localToWorld( idx, ofs, 0, back )
+			local xw2,y,zw2 = localToWorld( idx, ofs, 0, front )
+			
+			local lx1,lz1,lx2,lz2,lx3,lz3,lx4,lz4
+			dist = front - back
+			repeat 
+				xw2 = xw1 + dist * dx
+				zw2 = zw1 + dist * dz
+				lx1,lz1,lx2,lz2,lx3,lz3 = AutoSteeringEngine.getParallelogram( xw1,zw1,xw2,zw2, w, true )
+				lx4 = lx3 + lx2 - lx1
+				lz4 = lz3 + lz2 - lz1
+				
+				dist = dist - math.max( 0.5, dist * 0.2 )
+			until dist < 0.5
+					or ( vehicle.aseHeadland >= 1
+					 and ( AutoSteeringEngine.isChainPointOnField( vehicle, lx3, lz3 )
+ 						  or AutoSteeringEngine.isChainPointOnField( vehicle, lx4, lz4 )
+	 						or AutoSteeringEngine.isChainPointOnField( vehicle, 0.5 * ( lx3 + lx4), 0.5 * ( lz3 + lz4 ) ) ) )
+					or ( vehicle.aseHeadland < 1
+					 and ( AutoSteeringEngine.checkField( vehicle, lx3, lz3 )
+					    or AutoSteeringEngine.checkField( vehicle, lx4, lz4 )
+					    or AutoSteeringEngine.checkField( vehicle, 0.5 * ( lx3 + lx4), 0.5 * ( lz3 + lz4 ) ) ) )
+
+			local lx5 = 0.25 * ( lx1 + lx2 + lx3 + lx4 )
+			local lz5 = 0.25 * ( lz1 + lz2 + lz3 + lz4 )
+			
+			if vehicle.aseHeadland < 1 then
+				if     AutoSteeringEngine.checkField( vehicle, lx1, lz1 )
+						or AutoSteeringEngine.checkField( vehicle, lx2, lz2 )
+						or AutoSteeringEngine.checkField( vehicle, lx3, lz3 )
+						or AutoSteeringEngine.checkField( vehicle, lx4, lz4 )
+						or AutoSteeringEngine.checkField( vehicle, lx5, lz5 ) then
+					if AutoSteeringEngine.getFruitArea( vehicle, xw1,zw1,xw2,zw2, w, toolParam.i, true ) > 0 then
+						return true
+					end			
+				end			
+			else
+				if     AutoSteeringEngine.isChainPointOnField( vehicle, lx1, lz1 )
+						or AutoSteeringEngine.isChainPointOnField( vehicle, lx2, lz2 )
+						or AutoSteeringEngine.isChainPointOnField( vehicle, lx3, lz3 )
+						or AutoSteeringEngine.isChainPointOnField( vehicle, lx4, lz4 )
+						or AutoSteeringEngine.isChainPointOnField( vehicle, lx5, lz5 ) then
+					if AutoSteeringEngine.getFruitArea( vehicle, xw1,zw1,xw2,zw2, w, toolParam.i, true ) > 0 then
+						return true
+					end			
 				end			
 			end			
 		end
@@ -2158,7 +2358,7 @@ function AutoSteeringEngine.drawLines( vehicle )
 	if      vehicle.aseDirectionBeforeTurn   ~= nil 
 			and vehicle.acTurnStage              ~= nil
 			and vehicle.acTurnStage              ~= 0
-			and vehicle.acTurnStage               < 97 then
+			and vehicle.acTurnStage               < 197 then
 			
 		if vehicle.aseDirectionBeforeTurn.itv1 ~= nil then
 			local lx1,lz1,lx2,lz2,lx3,lz3 = unpack( vehicle.aseDirectionBeforeTurn.itv1 )
@@ -2770,7 +2970,7 @@ end
 function AutoSteeringEngine.applyRotation( vehicle, toIndex )
 
 	local cumulRot, turnAngle = 0, 0
-	if vehicle.acTurnStage ~= nil and vehicle.acTurnStage == 0 then
+	if vehicle.aseChain.inField then
 		cumulRot  = AutoSteeringEngine.getTurnAngle( vehicle )
 		turnAngle = AutoSteeringEngine.getTurnAngle( vehicle )
 	end 
@@ -3476,8 +3676,8 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 						vehicle.aseChain.nodes[i].tool[toolParam.i].t  = 0
 						
 						bi, ti  = AutoSteeringEngine.getFruitArea( vehicle, xp, zp, xc, zc, offsetOutside, toolParam.i )		
-						if ASEGlobals.testOutside > 0 and bi <= 0 and i <= vehicle.aseChain.chainStep3 then
-							bj, tj  = AutoSteeringEngine.getFruitArea( vehicle, xp, zp, xc, zc, -ASEGlobals.testOutside * offsetOutside, toolParam.i )			
+						if toolParam.offsetStd > 0 and bi <= 0 and i <= vehicle.aseChain.chainStep3 then
+							bj, tj  = AutoSteeringEngine.getFruitArea( vehicle, xp, zp, xc, zc, -toolParam.offsetStd * offsetOutside, toolParam.i )			
 						end
 						
 						if vehicle.aseChain.collectCbr then
@@ -3610,7 +3810,8 @@ function AutoSteeringEngine.getSteeringParameterOfTool( vehicle, toolIndex, maxL
 		
 		local width  = xl - xr		
 		local offset = AutoSteeringEngine.getWidthOffset( vehicle, width, widthOffset, widthFactor )
-
+		toolParam.offsetStd = AutoSteeringEngine.getWidthOffsetStd( vehicle, width )
+		
 		width = width - offset - offset
 
 		if vehicle.aseLRSwitch	then
@@ -3723,6 +3924,7 @@ function AutoSteeringEngine.getSteeringParameterOfTool( vehicle, toolIndex, maxL
 
 		local width  = xl - xr
 		local offset = AutoSteeringEngine.getWidthOffset( vehicle, width, widthOffset, widthFactor )
+		toolParam.offsetStd = AutoSteeringEngine.getWidthOffsetStd( vehicle, width )
 
 		width = width - offset - offset
 
@@ -3745,8 +3947,8 @@ function AutoSteeringEngine.getSteeringParameterOfTool( vehicle, toolIndex, maxL
 		local a1 = math.atan( vehicle.aseChain.wheelBase / r1 )
 		local a2 = maxLooking 
 		
-		if z1 < 0 and ASEGlobals.testOutside > 0 and ( toolParam.limitOutside or toolParam.limitInside ) then
-			local of = ASEGlobals.testOutside
+		if z1 < 0 and toolParam.offsetStd > 0 and ( toolParam.limitOutside or toolParam.limitInside ) then
+			local of = toolParam.offsetStd
 			local zf = z1 + 0.1 * ( zb-z1 )
 			local r2 = ( zf*zf - of*of ) / ( of+of )
 			if vehicle.aseLRSwitch then
@@ -3872,26 +4074,28 @@ function AutoSteeringEngine.initSteering( vehicle )
 	local ma = vehicle.aseMaxAngle
 
 	if vehicle.aseToolParams == nil or table.getn( vehicle.aseToolParams ) < 1 then
-		vehicle.aseMinAngle = -vehicle.aseChain.maxSteering
-		vehicle.aseMaxAngle = vehicle.aseChain.maxSteering
-		vehicle.aseWidth    = 0
-		vehicle.aseDistance = 0
-		vehicle.aseStart    = 0
-		vehicle.aseActiveX  = 0
-		vehicle.aseOtherX   = 0
-		vehicle.aseOffset   = 0
-		vehicle.aseBack     = 0
+		vehicle.aseMinAngle  = -vehicle.aseChain.maxSteering
+		vehicle.aseMaxAngle  = vehicle.aseChain.maxSteering
+		vehicle.aseWidth     = 0
+		vehicle.aseDistance  = 0
+		vehicle.aseStart     = 0
+		vehicle.aseActiveX   = 0
+		vehicle.aseOtherX    = 0
+		vehicle.aseOffset    = 0
+		vehicle.aseBack      = 0
+		vehicle.aseOffsetStd = 0
   else
-		vehicle.aseMinAngle = nil
-		vehicle.aseMaxAngle = nil
-		vehicle.aseActiveX  = nil
-		vehicle.aseOtherX   = nil
+		vehicle.aseMinAngle  = nil
+		vehicle.aseMaxAngle  = nil
+		vehicle.aseActiveX   = nil
+		vehicle.aseOtherX    = nil
 		
-		vehicle.aseWidth    = 0
-		vehicle.aseDistance = nil
-		vehicle.aseStart    = nil
-		vehicle.aseOffset   = nil
-		vehicle.aseBack     = nil 
+		vehicle.aseWidth     = 0
+		vehicle.aseDistance  = nil
+		vehicle.aseStart     = nil
+		vehicle.aseOffset    = nil
+		vehicle.aseBack      = nil 
+		vehicle.aseOffsetStd = 0
 		
 		for _,tp in pairs(vehicle.aseToolParams) do							
 			if vehicle.aseDistance  == nil or vehicle.aseDistance > tp.zReal then
@@ -3920,6 +4124,9 @@ function AutoSteeringEngine.initSteering( vehicle )
 				end
 				if vehicle.aseMaxAngle == nil or vehicle.aseMaxAngle > tp.maxAngle then
 					vehicle.aseMaxAngle = tp.maxAngle
+				end
+				if vehicle.aseOffsetStd < tp.offsetStd then
+					vehicle.aseOffsetStd  = tp.offsetStd
 				end
 			end
 			
@@ -4137,7 +4344,7 @@ function AutoSteeringEngine.setChainInt( vehicle, startIndex, mode, angle, facto
 			end
 		elseif vehicle.aseChain.nodes[j].length > 1E-3 then 
 			local targetRot = 0
-			if ASEGlobals.straightTA > 0 and vehicle.acTurnStage ~= nil and vehicle.acTurnStage == 0 then
+			if ASEGlobals.straightTA > 0 and vehicle.aseChain.inField then
 				targetRot = -AutoSteeringEngine.getTurnAngle( vehicle )				
 			end
 			
@@ -4646,16 +4853,15 @@ function AutoSteeringEngine.initTurnVector( vehicle, uTurn, turn2Outside )
 			local xw0,zw0,xw1,zw1,xw2,zw2 
 			local dist = Utils.clamp( AutoSteeringEngine.getTraceLength( vehicle ), ASEGlobals.ignoreDist + 3, ASEGlobals.maxTurnCheck )
 			local f = offsetOutside * 0.025 * math.abs( vehicle.aseWidth )
-			local t = offsetOutside * ASEGlobals.testOutside
 
 			for i = 0,40 do
 				xw0 = vehicle.aseDirectionBeforeTurn.ox + f * i * dxx
-				zw0 = vehicle.aseDirectionBeforeTurn.oz + f * t * dzx
+				zw0 = vehicle.aseDirectionBeforeTurn.oz + f * i * dzx
 				
-				xw1 = xw0 - t * dxx - dist * dxz
-				zw1 = zw0 - t * dzx - dist * dzz
-				xw2 = xw0 - t * dxx
-				zw2 = zw0 - t * dzx
+				xw1 = xw0 - dist * dxz
+				zw1 = zw0 - dist * dzz
+				xw2 = xw0
+				zw2 = zw0
 				if vehicle.aseHeadland > 0 then
 					xw2 = xw2 - ASEGlobals.ignoreDist * dxz
 					zw2 = zw2 - ASEGlobals.ignoreDist * dzz
@@ -4677,13 +4883,21 @@ function AutoSteeringEngine.initTurnVector( vehicle, uTurn, turn2Outside )
 				vehicle.aseDirectionBeforeTurn.itv2 = { AutoSteeringEngine.getParallelogram( xw1, zw1, xw2, zw2, offsetOutside ) }
 			end
 			
-		--print(string.format("%3.2fm %3.2fm / %3.2fm %3.2fm => %3.2fm %3.2fm", 
-		--			vehicle.aseDirectionBeforeTurn.ox,
-		--			vehicle.aseDirectionBeforeTurn.oz,
-		--			vehicle.aseDirectionBeforeTurn.ux,
-		--			vehicle.aseDirectionBeforeTurn.uz,
-		--			xw0 - vehicle.aseDirectionBeforeTurn.ox,
-		--			zw0 - vehicle.aseDirectionBeforeTurn.oz ) )
+			f = offsetOutside * math.max( 0.1 * vehicle.aseWidth, Utils.getNoNil( vehicle.aseChain.offsetAvg, vehicle.aseOffsetStd ) )
+			xw0 = xw0 + f * dxx
+			zw0 = zw0 + f * dzx
+			
+			local dx1,_,dz1 = localDirectionToWorld( vehicle.aseChain.headlandNode, vehicle.aseDirectionBeforeTurn.ux - xw0, 0, vehicle.aseDirectionBeforeTurn.uz - zw0 )
+			local dx2,_,dz2 = localDirectionToWorld( vehicle.aseChain.headlandNode, xw0 - vehicle.aseDirectionBeforeTurn.ox, 0, zw0 - vehicle.aseDirectionBeforeTurn.oz )
+			
+			AutoTractor.debugPrint(string.format("%3.2fm %3.2fm / %3.2fm %3.2fm => %3.2fm %3.2fm (%d)", 
+						vehicle.aseDirectionBeforeTurn.ox,
+						vehicle.aseDirectionBeforeTurn.oz,
+						dx1,
+						dz1,
+						dx2,
+						dz2,
+						offsetOutside ) )
 						
 			vehicle.aseDirectionBeforeTurn.ux = vehicle.aseDirectionBeforeTurn.ux + xw0 - vehicle.aseDirectionBeforeTurn.ox
 			vehicle.aseDirectionBeforeTurn.uz = vehicle.aseDirectionBeforeTurn.uz + zw0 - vehicle.aseDirectionBeforeTurn.oz

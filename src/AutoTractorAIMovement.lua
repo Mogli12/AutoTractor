@@ -19,7 +19,7 @@ function AutoTractor:detectAngle( smooth )
 		self.acHighPrec = true
 	end
 	
-	local d, a, b = AutoSteeringEngine.processChain( self, smooth, not ( self.acHighPrec ) )
+	local d, a, b = AutoSteeringEngine.processChain( self, smooth, not ( self.acHighPrec ), ( self.acTurnStage == 0 or self.acTurnStage == 199 ) )
 
 	if      self.acTurnStage == 0 
 			and b                <= 0
@@ -346,6 +346,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		--		end
 		--	end
 		--end
+			speedLevel = 1
 			if AutoSteeringEngine.hasLeftFruits( self ) then
 				detected = false
 			else
@@ -360,6 +361,7 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 				and ( ( not detected and border <= 0 )
 					 or AutoSteeringEngine.getIsAtEnd( self ) )
 				and AutoSteeringEngine.getTraceLength(self) > 5 then
+			speedLevel = 1
 			if noReverseIndex > 0 then
 				angle   = math.min( math.max( math.rad( 0.5 * turnAngle ), -self.acDimensions.maxSteeringAngle ), self.acDimensions.maxSteeringAngle )
 			else
@@ -1410,9 +1412,6 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 			angle    = 0
 			angle2   = nil
 		else
-			--AutoSteeringEngine.currentSteeringAngle( self );
-			--AutoSteeringEngine.setChainOutside( self );
-			--detected, angle2, border = AutoSteeringEngine.processChain( self );			
 			detected, angle2, border = AutoTractor.detectAngle( self )
 						
 			if detected then
@@ -2571,9 +2570,11 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 	if speedLevel == 0 then
 		allowedToDrive = false
 		speedLevel     = 1
-	elseif self.acTurnStage > 0 
-			or ( not detected and self.acTurnStage >= -2 ) then
+	elseif self.acTurnStage > 0 then
 		speedLevel = 4
+		slowAngleLimit = self.acDimensions.maxSteeringAngle;
+	elseif not detected and self.acTurnStage >= -2 then
+		speedLevel = 1
 		slowAngleLimit = self.acDimensions.maxSteeringAngle;
 	end;
 	
