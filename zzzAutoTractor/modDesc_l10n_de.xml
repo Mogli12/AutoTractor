@@ -64,6 +64,8 @@
 		<text name="AUTO_TRACTOR_PAUSE_OFF"                text="Pause [aus]" />
 		<text name="AUTO_TRACTOR_STEER_RAISE"              text="Geräte hoch/aus" />
 		<text name="AUTO_TRACTOR_STEER_LOWER"              text="Geräte runter/an" />
+		<text name="AUTO_TRACTOR_TRACE"                    text="Spur anzeigen" />
+		<text name="AUTO_TRACTOR_MAGIC"                    text="Feld neu erkennen" />
 		
 		<text name="AUTO_TRACTOR_1"                        text="Geschwindigkeitsstufe 1" />
 		<text name="AUTO_TRACTOR_2"                        text="Geschwindigkeitsstufe 2" />

@@ -255,6 +255,8 @@ function AutoTractorRegister:add()
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_PAUSE_OFF"]                = g_i18n:getText("AUTO_TRACTOR_PAUSE_OFF");  
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_STEER_RAISE"]              = g_i18n:getText("AUTO_TRACTOR_STEER_RAISE"); 
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_STEER_LOWER"]              = g_i18n:getText("AUTO_TRACTOR_STEER_LOWER"); 
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_TRACE"]                    = g_i18n:getText("AUTO_TRACTOR_TRACE"); 
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_MAGIC"]                    = g_i18n:getText("AUTO_TRACTOR_MAGIC"); 
 	
 end;
 

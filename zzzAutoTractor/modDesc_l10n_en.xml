@@ -59,6 +59,12 @@
 		<text name="AUTO_TRACTOR_TURN_MODE_L" text="small 90° turn" />
 		<text name="AUTO_TRACTOR_TURN_MODE_K" text="big 90° turn" />
 		<text name="AUTO_TRACTOR_TURN_MODE_8" text="U-turn without going back" />
+		<text name="AUTO_TRACTOR_PAUSE_ON"                 text="pause [on]" />
+		<text name="AUTO_TRACTOR_PAUSE_OFF"                text="pause [off]" />
+		<text name="AUTO_TRACTOR_STEER_RAISE"              text="raise all implements" />
+		<text name="AUTO_TRACTOR_STEER_LOWER"              text="lower all implements" />
+		<text name="AUTO_TRACTOR_TRACE"                    text="show trace" />
+		<text name="AUTO_TRACTOR_MAGIC"                    text="refresh field" />
 		
 		<text name="AUTO_TRACTOR_1" text="speed level 1" />
 		<text name="AUTO_TRACTOR_2" text="speed level 2" />

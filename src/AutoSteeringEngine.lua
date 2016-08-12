@@ -780,7 +780,7 @@ end
 -- getWidthOffset
 ------------------------------------------------------------------------
 function AutoSteeringEngine.getWidthOffset( vehicle, width, widthOffset, widthFactor )
-	return widthOffset
+	return -widthOffset
 end
 
 ------------------------------------------------------------------------
@@ -2284,50 +2284,41 @@ function AutoSteeringEngine.drawMarker( vehicle )
 	--	end
 	--end
 	
-	if vehicle.aseToolParams ~= nil and table.getn( vehicle.aseToolParams ) > 0 then
+	if vehicle.acIamDetecting and vehicle.aseToolParams ~= nil and table.getn( vehicle.aseToolParams ) > 0 then
 		local px,py,pz
 		local off = 1
 		if not vehicle.aseLRSwitch then
 			off = -off
 		end
 					
-		for j,tp in pairs(vehicle.aseToolParams) do
-			
-		--for _,m in pairs(vehicle.aseTools[tp.i].marker) do
-		--	local x,y,z = getWorldTranslation( m )
-		--	y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 1, z)
-		--	drawDebugLine(  x,y,z, 0,0,1, x,y+2,z, 0,0,1 )
-		--	drawDebugPoint( x,y+2,z, 1, 1, 1, 1 )
-		--end
-		--
-		--if vehicle.aseTools[tp.i].aiBackMarker ~= nil then
-		--	local x,y,z = getWorldTranslation( vehicle.aseTools[tp.i].aiBackMarker )
-		--	y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 1, z)
-		--	drawDebugLine(  x,y,z, 0,1,0, x,y+2,z, 0,1,0 )
-		--	drawDebugPoint( x,y+2,z	, 1, 1, 1, 1 )
-		--end
-			
-			if not ( tp.skip ) and vehicle.acIamDetecting then
+		for j,tp in pairs(vehicle.aseToolParams) do		
+			if not ( tp.skip ) then
 				local c = { 0.5, 0.5, 0.5 }
-				if      tp.noEmptyBorder then
-					c = { 1, 0, 0 }
-				elseif  vehicle.aseFruitAreas ~= nil 
+				if      vehicle.aseFruitAreas ~= nil 
 						and vehicle.aseFruitAreas[j] ~= nil 
 						and vehicle.aseFruitAreas[j][9] then
 					c = { 0, 1, 0 }
 				end
-				local wx,wy,wz = AutoSteeringEngine.getChainPoint( vehicle, 2, tp )
-				local x2,y2,z2 = AutoSteeringEngine.getChainPoint( vehicle, 3, tp )
-				x2 = 0.5*( wx+x2 )
-				z2 = 0.5*( wz+z2 )
-				wx,_,wz = AutoSteeringEngine.getChainPoint( vehicle, 1, tp )
-				wy = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, wx, 1, wz )
-				y2 = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x2, 1, z2 )
-				drawDebugLine(  wx,wy    ,wz, c[1],c[2],c[3], wx,wy+1.2,wz, c[1],c[2],c[3] )
-				drawDebugLine(  wx,wy+0.1,wz, c[1],c[2],c[3], x2,y2+0.1,z2, c[1],c[2],c[3] )
-				drawDebugLine(  wx,wy+0.2,wz, c[1],c[2],c[3], x2,y2+0.2,z2, c[1],c[2],c[3] )
-				drawDebugLine(  wx,wy+0.3,wz, c[1],c[2],c[3], x2,y2+0.3,z2, c[1],c[2],c[3] )
-				drawDebugPoint( wx,wy+1.2,wz	, 1, 1, 1, 1 )
+				
+				local x1,y1,z1 = AutoSteeringEngine.getChainPoint( vehicle, 1, tp )
+				y1 = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x1, y1, z1 )
+
+				drawDebugLine( x1,y1,z1, c[1],c[2],c[3], x1,y1+1.2,z1, c[1],c[2],c[3] )
+				drawDebugPoint( x1,y1+1.2,z1	, 1, 1, 1, 1 )
+				
+				for i=2,vehicle.aseChain.chainMax+1 do
+					if vehicle.aseChain.nodes[i].distance > 10 then
+						break
+					end
+					local x2,y2,z2 = AutoSteeringEngine.getChainPoint( vehicle, i, tp )
+					y2 = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x2, y2, z2 )
+					drawDebugLine(  x1,y1+0.1,z1, c[1],c[2],c[3], x2,y2+0.1,z2, c[1],c[2],c[3] )
+					drawDebugLine(  x1,y1+0.2,z1, c[1],c[2],c[3], x2,y2+0.2,z2, c[1],c[2],c[3] )
+					drawDebugLine(  x1,y1+0.3,z1, c[1],c[2],c[3], x2,y2+0.3,z2, c[1],c[2],c[3] )
+					x1 = x2
+					y1 = y2
+					z1 = z2
+				end
 			end
 		end
 	end	
@@ -3566,7 +3557,7 @@ function AutoSteeringEngine.getChainPoint( vehicle, i, tp )
 			
 		if i > 1 and math.abs( tp.b2 + tp.b3 ) > 1E-3 then
 			if vehicle.aseChain.nodes[i-1].status < ASEStatus.position then
-				AutoSteeringEngine.getChainPoint( vehicle, i, tp )
+				AutoSteeringEngine.getChainPoint( vehicle, i-1, tp )
 			end
 			
 			local dx, dy, dz = AutoSteeringEngine.getRelativeTranslation( vehicle.aseChain.nodes[i].index, vehicle.aseChain.nodes[i-1].index4 )
@@ -7633,4 +7624,5 @@ end
 
 Cultivator.updateTick    = Utils.overwrittenFunction( Cultivator.updateTick, AutoSteeringEngine.updateTickCultivator )
 --SowingMachine.updateTick = Utils.overwrittenFunction( SowingMachine.updateTick, AutoSteeringEngine.updateTickSowingMachine )
+
 
