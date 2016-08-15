@@ -56,7 +56,7 @@
     <maxLooking type="degree" value="30" />
     <minLooking type="degree" value="2" />
     <minLkgFactor type="float" value="0.15" />
-    <maxRotationC type="degree" value="60" />
+    <maxRotationC type="degree" value="50" />
     <maxRotationU type="degree" value="30" />
 		<minRadius type="float" value="5" />
     <minLength type="float" value="0"/> <!--value="0.25" />-->
