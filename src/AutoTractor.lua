@@ -1772,23 +1772,39 @@ function AutoTractor:autoSteer(dt)
 	local detected, angle, border = AutoTractor.detectAngle( self, smooth )			
 --==============================================================						
 	
-	if detected then
+	self.turnTimer = self.turnTimer - dt;
+	
+	if detected and border <= 0 then
 		AutoTractor.setStatus( self, 1 )
 		if self.acTurnStage ~= 199 then
 			self.acTurnStage = 199
 			AutoSteeringEngine.clearTrace( self );
 			AutoSteeringEngine.saveDirection( self, false );
+		elseif AutoSteeringEngine.getIsAtEnd( self ) then
+			if self.acParameters.leftAreaActive then
+				angle = math.max( angle, 0 )
+			else
+				angle = math.min( angle, 0 )
+			end
 		end
 		AutoSteeringEngine.saveDirection( self, true );
 		self.turnTimer = self.acDeltaTimeoutRun
+	elseif self.acTurnStage == 199 and self.turnTimer >= 0 then
+		if border > 0 then
+			angle = self.acDimensions.maxSteeringAngle
+		elseif AutoSteeringEngine.getIsAtEnd( self ) then
+			angle = 0
+		else
+			angle = -self.acDimensions.maxSteeringAngle
+		end
+		
+		if not self.acParameters.leftAreaActive then
+			angle = -angle;		
+		end
 	else
+		self.acTurnStage = 198
 		AutoTractor.setStatus( self, 2 )
 		angle = 0;
-		
-		self.turnTimer = self.turnTimer - dt;
-		if self.acTurnStage == 199 and self.turnTimer < 0 then
-			self.acTurnStage = 198
-		end
 	end
 	
 --	if not self.acParameters.leftAreaActive then angle = -angle end

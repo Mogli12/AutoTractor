@@ -48,6 +48,7 @@
 		
 		<correctionIn  type="float" value="1.0" />
 		<correctionOut type="float" value="1.0" />
+		<maxOutside type="float" value="0.0"/>
 		
 		<shiftFixZ type="bool" value="false" />
 		<colliMask type="bool" value="true" />
@@ -56,6 +57,7 @@
     <maxLooking type="degree" value="30" />
     <minLooking type="degree" value="2" />
     <minLkgFactor type="float" value="0.15" />
+    <maxRotation type="degree" value="30" />
     <maxRotationC type="degree" value="50" />
     <maxRotationU type="degree" value="30" />
 		<minRadius type="float" value="5" />
