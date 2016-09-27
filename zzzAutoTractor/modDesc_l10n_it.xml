@@ -59,6 +59,13 @@
 		<text name="AUTO_TRACTOR_TURN_MODE_L" text="svolta di 90° piccola" />
 		<text name="AUTO_TRACTOR_TURN_MODE_K" text="svolta di 90° grande" />
 		<text name="AUTO_TRACTOR_TURN_MODE_8" text="svolta a U senza retro" />
+		<text name="AUTO_TRACTOR_PAUSE_ON"                 text="pausa [on]" />
+		<text name="AUTO_TRACTOR_PAUSE_OFF"                text="pausa [off]" />
+		<text name="AUTO_TRACTOR_STEER_RAISE"              text="solleva tutti gli attrezzi" />
+		<text name="AUTO_TRACTOR_STEER_LOWER"              text="abbassa tutti gli attrezzi" />
+		<text name="AUTO_TRACTOR_TRACE"                    text="mostra traccia" />
+		<text name="AUTO_TRACTOR_MAGIC"                    text="aggiorna il campo" />
+				
 		
 		<text name="AUTO_TRACTOR_1" text="livello velocità 1" />
 		<text name="AUTO_TRACTOR_2" text="livello velocità 2" />
