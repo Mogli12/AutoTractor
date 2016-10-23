@@ -36,6 +36,7 @@
 		<text name="AUTO_TRACTOR_INVERTED_OFF"             text="Arbeitsmodus [vorwärts]" />
 		<text name="AUTO_TRACTOR_WIDTH_OFFSET"             text="Offset (Breite)" />	
 		<text name="AUTO_TRACTOR_TURN_OFFSET"              text="Offset (Wendemanöver)" />
+		<text name="AUTO_TRACTOR_ANGLE_OFFSET"             text="Lenkwinkel" />
 		<text name="AUTO_TRACTOR_SAFETY_FACTOR"            text="Sicherheitsabstand" />
 		<text name="AUTO_TRACTOR_ERROR"                    text="Fehler" />
 		<text name="AUTO_TRACTOR_NEXTTURNSTAGE"            text="Springe zum nächsten Schritt" />

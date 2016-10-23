@@ -387,7 +387,11 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 
 		AutoSteeringEngine.setChainStatus( vehicle, 1, ASEStatus.initial )
 		AutoSteeringEngine.processChainSetAngle( vehicle, 0, indexMax, indexMax )
-		local bi, ti, bo, to = AutoSteeringEngine.getAllChainBorders( vehicle, ASEGlobals.chainStart, indexMax )
+		local bi, ti, bo, to, bw, tw = AutoSteeringEngine.getAllChainBorders( vehicle, ASEGlobals.chainStart, indexMax, true )
+		
+		if bi > 0 or bo > 0 or bw > 0 then
+			detected = true
+		end
 
 		best = { AutoSteeringEngine.processChainGetScore( 0, bi, ti, bo, to ), indexMax, indexMax, 0, bi }
 		
@@ -437,7 +441,7 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 				bi, ti, bo, to = AutoSteeringEngine.getAllChainBorders( vehicle, ASEGlobals.chainStart, indexMax )
 			end
 		
-			if     bi <= 0 and bo <= 0 then
+			if     bi <= 0 and bo <= 0 and bw <= 0 then
 				-- there is nothing
 				vehicle.aseProcessChainInfo = "nothing found"
 				best  = { -1.4, indexMax, indexMax, -1, 0 }
@@ -1012,7 +1016,7 @@ function AutoSteeringEngine.initTools( vehicle, maxLooking, leftActive, widthOff
 	vehicle.aseHeadland    = headlandDist
 	vehicle.aseTurnMode    = turnMode
 	vehicle.aseMaxLooking  = maxLooking	
-	vehicle.aseMinLooking  = math.max( ASEGlobals.minLooking, maxLooking * ASEGlobals.minLkgFactor )
+	vehicle.aseMinLooking  = math.min( math.max( ASEGlobals.minLooking, maxLooking * ASEGlobals.minLkgFactor ), 0.5 * vehicle.aseMaxLooking )
 	
 	local maxRot = 0.5*math.pi
 	if     vehicle.aseTurnMode == "C"
@@ -2988,6 +2992,10 @@ function AutoSteeringEngine.applySteering( vehicle, toIndex )
 				b = aMin * vehicle.aseChain.nodes[j].angle
 			end
 			
+			if ASEGlobals.zeroAngle2 > 0 and ASEGlobals.zeroAngle2 ~= 1 then
+				b = b * ASEGlobals.zeroAngle2
+			end
+			
 			if not vehicle.aseLRSwitch	then
 				b = -b 
 			end
@@ -3653,11 +3661,12 @@ end
 ------------------------------------------------------------------------
 -- getChainBorder
 ------------------------------------------------------------------------
-function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak )
+function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, detectWidth )
 	if not vehicle.isServer then return 0,0 end
 	
 	local b,t    = 0,0
 	local bo,to  = 0,0
+	local bw,tw  = 0,0
 	local d      = false
 	local i      = i1
 	local count  = 0
@@ -3669,6 +3678,7 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 
 	local fcOffset = -offsetOutside * toolParam.width
 	local detectedBefore = false
+	local dx, _, dz = localDirectionToWorld( vehicle.aseChain.refNode, -offsetOutside, 0, 0 )
 	
 	if 1 <= i and i <= vehicle.aseChain.chainMax then
 		local xp,yp,zp = AutoSteeringEngine.getChainPoint( vehicle, i, toolParam )
@@ -3686,6 +3696,7 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 			
 			local bi, ti = 0, 0
 			local bj, tj = 0, 0
+			local bk, tk = 0, 0
 			local fi     = false
 			
 			if  		ASEGlobals.borderBuffer > 0
@@ -3699,6 +3710,34 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 					ti = vehicle.aseChain.nodes[i].tool[toolParam.i].t
 					bj = vehicle.aseChain.nodes[i].tool[toolParam.i].bo
 					tj = vehicle.aseChain.nodes[i].tool[toolParam.i].to
+
+					if bi <= 0 then					
+						if detectWidth and vehicle.aseChain.nodes[i].tool[toolParam.i].tw < 0 then
+							local xkw       = xp + toolParam.offsetStd * dx
+							local zkw       = zp + toolParam.offsetStd * dz
+							
+							for m=1,10 do
+								local xm = xp + 0.1 * m * toolParam.width * dx
+								local zm = zp + 0.1 * m * toolParam.width * dz
+								if AutoSteeringEngine.isChainPointOnField( vehicle, xm, zm ) then
+									xkw = xm
+									zkw = zm
+								end
+							end
+							
+							bk, tk = AutoSteeringEngine.getFruitAreaWorldPositions( vehicle, vehicle.aseTools[toolParam.i], xp, zp ,xkw, zkw, xc, zc )
+							
+							if vehicle.aseChain.collectCbr then
+								table.insert( vehicle.aseChain.cbr, { xp, zp ,xkw, zkw, xc, zc, bk, tk } )
+							end
+							
+							vehicle.aseChain.nodes[i].tool[toolParam.i].bw = bk
+							vehicle.aseChain.nodes[i].tool[toolParam.i].tw = tk
+						end
+					end
+					
+					bk = vehicle.aseChain.nodes[i].tool[toolParam.i].bw
+					tk = vehicle.aseChain.nodes[i].tool[toolParam.i].tw
 				end
 				
 			else			
@@ -3707,6 +3746,8 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 				vehicle.aseChain.nodes[i].tool[toolParam.i].b  = 0
 				vehicle.aseChain.nodes[i].tool[toolParam.i].bo = 0
 				vehicle.aseChain.nodes[i].tool[toolParam.i].to = 0
+				vehicle.aseChain.nodes[i].tool[toolParam.i].bw = 0
+				vehicle.aseChain.nodes[i].tool[toolParam.i].tw = 0
 				
 				if      not AutoSteeringEngine.hasCollision( vehicle, vehicle.aseChain.nodes[i].index )
 						and not AutoSteeringEngine.hasCollision( vehicle, vehicle.aseChain.nodes[i+1].index )
@@ -3739,6 +3780,29 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 						if toolParam.offsetStd > 0 and bi <= 0 then
 							bj, tj  = AutoSteeringEngine.getFruitArea( vehicle, xp, zp, xc, zc, -toolParam.offsetStd * offsetOutside, toolParam.i )			
 						end
+						if bi <= 0 then
+							if detectWidth then
+								local xkw       = xp + toolParam.offsetStd * dx
+								local zkw       = zp + toolParam.offsetStd * dz
+								
+								for m=1,10 do
+									local xm = xp + 0.1 * m * toolParam.width * dx
+									local zm = zp + 0.1 * m * toolParam.width * dz
+									if AutoSteeringEngine.isChainPointOnField( vehicle, xm, zm ) then
+										xkw = xm
+										zkw = zm
+									end
+								end
+								
+								bk, tk = AutoSteeringEngine.getFruitAreaWorldPositions( vehicle, vehicle.aseTools[toolParam.i], xp, zp ,xkw, zkw, xc, zc )
+								
+								if vehicle.aseChain.collectCbr then
+									table.insert( vehicle.aseChain.cbr, { xp, zp ,xkw, zkw, xc, zc, bk, tk } )
+								end
+							else
+								tk = -1
+							end
+						end
 						
 						if vehicle.aseChain.collectCbr then
 							local cbr = { AutoSteeringEngine.getParallelogram( xp, zp, xc, zc, offsetOutside ) }
@@ -3754,6 +3818,8 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 						vehicle.aseChain.nodes[i].tool[toolParam.i].t  = ti
 						vehicle.aseChain.nodes[i].tool[toolParam.i].bo = bj
 						vehicle.aseChain.nodes[i].tool[toolParam.i].to = tj
+						vehicle.aseChain.nodes[i].tool[toolParam.i].bw = bk
+						vehicle.aseChain.nodes[i].tool[toolParam.i].tw = tk
 					end
 				end
 			end
@@ -3764,11 +3830,16 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 				bo = bo + bj
 				to = to + tj
 				
+				if tk >= 0 then
+					bw = bw + bk
+					tw = tw + tk
+				end
+				
 				vehicle.aseChain.nodes[i].isField = true
 				if b > 0 then
 					vehicle.aseChain.nodes[i].hasBorder = true
 				end
-				if bi > 0 or bj > 0 then
+				if bi > 0 or bj > 0 or bk > 0 then
 					vehicle.aseChain.nodes[i].detected = true
 					detectedBefore = true
 				end
@@ -3777,14 +3848,14 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 			if vehicle.aseChain.completeTrace then
 			-- continue...
 			elseif b > 0 then
-				return b, t, bo, to
+				return b, t, bo, to, bw, tw
 			elseif ASEGlobals.maxOutside >= 0.1 and vehicle.aseChain.inField and bi <= 0 and bj <= 0 and i > vehicle.aseChain.chainStep0 then
 				local bt, tt = 0, 1
 				if fi then
 					bt, tt = AutoSteeringEngine.getFruitArea( vehicle, xp, zp, xc, zc, -offsetOutside * ASEGlobals.maxOutside, toolParam.i )
 				end
 				if bt <= 0 and tt > 0 then
-					return b, t, bo, to
+					return b, t, bo, to, bw, tw
 				end
 			end
 			
@@ -3795,17 +3866,18 @@ function AutoSteeringEngine.getChainBorder( vehicle, i1, i2, toolParam, noBreak 
 		end
 	end
 	
-	return b, t, bo, to
+	return b, t, bo, to, bw, tw
 end
 
 ------------------------------------------------------------------------
 -- getAllChainBorders
 ------------------------------------------------------------------------
-function AutoSteeringEngine.getAllChainBorders( vehicle, i1, i2, noBreak )
+function AutoSteeringEngine.getAllChainBorders( vehicle, i1, i2, detectWidth )
 	if not vehicle.isServer then return 0,0,0,0 end
 	
 	local b,t   = 0,0
 	local bo,to = 0,0
+	local bw,tw = 0,0
 	
 	if i1 == nil then i1 = 1 end
 	if i2 == nil then i2 = vehicle.aseChain.chainMax end
@@ -3820,15 +3892,17 @@ function AutoSteeringEngine.getAllChainBorders( vehicle, i1, i2, noBreak )
 		
 	for _,tp in pairs(vehicle.aseToolParams) do	
 		if not ( tp.skip ) then
-			local bi,ti,bj,tj = AutoSteeringEngine.getChainBorder( vehicle, i1, i2, tp )				
+			local bi,ti,bj,tj,bk,tk = AutoSteeringEngine.getChainBorder( vehicle, i1, i2, tp, detectWidth )				
 			b  = b  + bi
 			t  = t  + ti
 			bo = bo + bj
 			to = to + tj
+			bw = bw + bk
+			tw = tw + tk
 		end
 	end
 	
-	return b,t,bo,to
+	return b,t,bo,to,bw,tw
 end
 
 ------------------------------------------------------------------------

@@ -227,6 +227,7 @@ function AutoTractorRegister:add()
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_INVERTED_OFF"]             = g_i18n:getText("AUTO_TRACTOR_INVERTED_OFF");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_WIDTH_OFFSET"]             = g_i18n:getText("AUTO_TRACTOR_WIDTH_OFFSET");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_TURN_OFFSET"]              = g_i18n:getText("AUTO_TRACTOR_TURN_OFFSET");
+	g_i18n.globalI18N.texts["AUTO_TRACTOR_ANGLE_OFFSET"]             = g_i18n:getText("AUTO_TRACTOR_ANGLE_OFFSET");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_SAFETY_FACTOR"]            = g_i18n:getText("AUTO_TRACTOR_SAFETY_FACTOR");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_ERROR"]                    = g_i18n:getText("AUTO_TRACTOR_ERROR");
 	g_i18n.globalI18N.texts["AUTO_TRACTOR_NEXTTURNSTAGE"]            = g_i18n:getText("AUTO_TRACTOR_NEXTTURNSTAGE");

@@ -62,6 +62,7 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
 																			safetyFactor    = { xml = "acSafetyFactor",tp = "I", default = ASEGlobals.safetyFactor },
+																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.4 },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
@@ -256,6 +257,8 @@ function AutoTractor:initMogliHud()
 	AutoTractorHud.addButton(self, "dds/noFrontPacker.dds",  "dds/frontPacker.dds",  AutoTractor.setFrontPacker,AutoTractor.evalFrontPacker,2,4, "AUTO_TRACTOR_FRONT_PACKER_OFF", "AUTO_TRACTOR_FRONT_PACKER_ON" );
 	AutoTractorHud.addButton(self, "dds/safety_ina.dds",     nil,                    AutoTractor.onToggleTrace, nil,                        3,4, "AUTO_TRACTOR_TRACE", nil );
 	AutoTractorHud.addButton(self, "dds/refresh.dds",        nil,                    AutoTractor.onMagic,       nil,                        4,4, "AUTO_TRACTOR_MAGIC", nil );
+	AutoTractorHud.addButton(self, "dds/angle_plus.dds",     nil,                    AutoTractor.setAngleUp,    AutoTractor.evalAngleUp,    5,4, "AUTO_TRACTOR_ANGLE_OFFSET", nil, AutoTractor.getAngleFactor);
+	AutoTractorHud.addButton(self, "dds/angle_minus.dds",    nil,                    AutoTractor.setAngleDown,  AutoTractor.evalAngleDown,  6,4, "AUTO_TRACTOR_ANGLE_OFFSET", nil, AutoTractor.getAngleFactor);
 	
 	if type( self.atHud ) == "table" then
 		self.atMogliInitDone = true
@@ -564,6 +567,30 @@ function AutoTractor:setSafetyDown(enabled)
 	if enabled then self.acParameters.safetyFactor = math.max( 0, self.acParameters.safetyFactor - 1 ) end
 end
 
+function AutoTractor:evalAngleUp()
+	if not self.acParameters.enabled then 
+		return true 
+	end 
+	local enabled = self.acParameters.angleFactor <= 0.95;
+	return enabled
+end
+
+function AutoTractor:evalAngleDown()
+	if not self.acParameters.enabled then 
+		return true 
+	end 
+	local enabled = self.acParameters.angleFactor >= 0.1;
+	return enabled
+end
+
+function AutoTractor:setAngleUp(enabled)
+	if enabled then self.acParameters.angleFactor = self.acParameters.angleFactor + 0.05 end
+end
+
+function AutoTractor:setAngleDown(enabled)
+	if enabled then self.acParameters.angleFactor = self.acParameters.angleFactor - 0.05 end
+end
+
 function AutoTractor:getMaxLookingAngleValue( noScale )
 	if self.acDimensions == nil then
 		return ASEGlobals.maxLooking
@@ -571,7 +598,17 @@ function AutoTractor:getMaxLookingAngleValue( noScale )
 	
 	local ml = Utils.getNoNil( self.acDimensions.maxSteeringAngle, ASEGlobals.maxLooking )
 	
+	if      self.acParameters                  ~= nil
+			and self.acParameters.angleFactor      ~= nil then
+		ml  = math.max( ml * self.acParameters.angleFactor, 0.0174533 )
+	end
+
 	return ml
+end
+
+function AutoTractor:getAngleFactor(old)
+	new = string.format(old..": %2.1f°",math.deg(AutoTractor.getMaxLookingAngleValue( self )));
+	return new
 end
 
 function AutoTractor:getSafetyFactor(old)
