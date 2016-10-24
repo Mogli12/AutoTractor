@@ -35,6 +35,7 @@
 		<text name="AUTO_TRACTOR_INVERTED_OFF" text="working mode [normal]" />
 		<text name="AUTO_TRACTOR_WIDTH_OFFSET" text="width offset" />
 		<text name="AUTO_TRACTOR_TURN_OFFSET" text="turn offset" />
+		<text name="AUTO_TRACTOR_ANGLE_OFFSET" text="turn angle" />
 		<text name="AUTO_TRACTOR_SAFETY_FACTOR" text="safety distance" />
 		<text name="AUTO_TRACTOR_ERROR" text="error" />
 		<text name="AUTO_TRACTOR_NEXTTURNSTAGE" text="go to next turn stage" />

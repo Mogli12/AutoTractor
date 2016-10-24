@@ -29,6 +29,7 @@
 		<text name="AUTO_TRACTOR_INVERTED_OFF" text="Mode travail [normal]" />
 		<text name="AUTO_TRACTOR_WIDTH_OFFSET" text="Décalage Largeur" />	
 		<text name="AUTO_TRACTOR_TURN_OFFSET" text="Décalage virage" />
+		<text name="AUTO_TRACTOR_ANGLE_OFFSET" text="Angle virage" />
 		<text name="AUTO_TRACTOR_SAFETY_FACTOR" text="Distance de sécurité" />
 		<text name="AUTO_TRACTOR_ERROR" text="Erreur" />
 		<text name="AUTO_TRACTOR_NEXTTURNSTAGE" text="Point virage suivant" />
