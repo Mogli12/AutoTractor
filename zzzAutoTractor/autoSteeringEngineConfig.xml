@@ -17,15 +17,16 @@
 		
     <angleStep    type="degree" value="0" />
     <angleStepInc type="degree" value="20" /> <!-- 27° / 45° -->
-    <angleStepDec type="degree" value="1" /> <!-- 0.2 => reduce by 10° per 10m -->
-		<fixAngleStep type="bool" value="true"/>
+    <angleStepDec type="degree" value="0" /> <!-- 0.2 => reduce by 10° per 10m -->
+    <angleStepMax type="degree" value="90" />
+		<fixAngleStep type="bool" value="false"/>
 		
     <angleFactorInside type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
     <angleFactorNoFix type="float" value="1.0" /> <!-- 2x3° with fix attacher / 2x6° with trailer or trailer_low -->
-    <chainDivideIn  value="5" />
-    <chainDivideOut value="10" />
+    <chainDivideIn  value="8" />
+    <chainDivideOut value="20" />
 		
-		<staticRoot type="bool" value="false" />
+		<staticRoot type="bool" value="true" />
 		<straightTA type="bool" value="true" />
 		
     <!--                                        1 1 2 2 3 4 5-->
@@ -33,18 +34,20 @@
     <!--                              1 2 3 4 5 6 7 8 9 0 1 2-->
     <chainLen    type="vector" value="1 1 2 2 2 3 4 5 6 7 8 9"/> 
 		<chainStep0  value="3"/>  <!-- initial part of the chain that always rotates    -->                           
-		<chainStep1  value="12"/>  <!-- steps to outside, can be smaller than chainStep2 -->
+		<chainStep1  value="8"/>  <!-- steps to outside, can be smaller than chainStep2 -->
 		<chainStep2  value="12"/> <!-- steps to check, increased only if nothing found  -->
 		<chainStep3  value="99"/> <!-- test outside up to this step                     -->
+		<chainStep4  value="99"/> <!-- test outside up to this step                     -->
 	
     <!--                                  1 1 2 2 3 3 4 5 6-->
     <!--                              3 6 0 5 0 5 0 6 3 1 0-->
     <!--                              1 2 3 4 5 6 7 8 9 0 1-->
     <chain2Len   type="vector" value="3 3 4 5 5 5 5 6 7 8 9"/> 
 		<chain2Step0 value="2"/>
-		<chain2Step1 value="11"/>
+		<chain2Step1 value="7"/>
 		<chain2Step2 value="11"/>
 		<chain2Step3 value="99"/>     
+		<chain2Step4 value="99"/>     
 		
     <chainBorder value="1" />
 		<chainStart value="1" />
@@ -120,5 +123,4 @@
 		<lowerAdvance type="float" value="2" />
 		
 		<borderBuffer type="bool" value="true" />
-		
 </ASEGlobals>

@@ -22,6 +22,7 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.angleStep    = 0
 	ASEGlobals.angleStepInc = 0
 	ASEGlobals.angleStepDec = 0
+	ASEGlobals.angleStepMax = 0
 	ASEGlobals.fixAngleStep = 0
 	ASEGlobals.angleFactorInside = 0
 	ASEGlobals.angleFactorNoFix = 0
@@ -94,10 +95,12 @@ function AutoSteeringEngine.globalsReset( createIfMissing )
 	ASEGlobals.chainStep1    = 0
 	ASEGlobals.chainStep2    = 0
 	ASEGlobals.chainStep3    = 0
+	ASEGlobals.chainStep4    = 0
 	ASEGlobals.chain2Step0   = 0
 	ASEGlobals.chain2Step1   = 0
 	ASEGlobals.chain2Step2   = 0
 	ASEGlobals.chain2Step3   = 0
+	ASEGlobals.chain2Step4   = 0
 	ASEGlobals.collectCbr    = 0
 	ASEGlobals.testOutside   = 0
 	ASEGlobals.safetyFactor  = 0
@@ -378,6 +381,7 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 	local best
 
 	local j0 = Utils.clamp( vehicle.aseChain.chainStep0, 1, indexMax )
+	local j1 = Utils.clamp( vehicle.aseChain.chainStep4, 1, indexMax )
 	
 	for i=1,vehicle.aseChain.chainMax do
 		vehicle.aseChain.nodes[i].detected = false
@@ -395,7 +399,7 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 
 		best = { AutoSteeringEngine.processChainGetScore( 0, bi, ti, bo, to ), indexMax, indexMax, 0, bi }
 		
-		if bi > 0 then
+		if bi > 0 or bo > 0 then
 			-- maybe we are too close
 			detected = true
 			
@@ -423,10 +427,10 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 						exitLoop = true
 					end
 					
-					if m > 0 or j0 < 1 then
+					if m > 0 or j1 < 1 then
 						m = m + 1
 					else
-						m = j0
+						m = j1
 					end
 				end
 
@@ -436,12 +440,10 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 			end
 						
 		else
-			if bo <= 0 then
-				AutoSteeringEngine.processChainSetAngle( vehicle, -1, indexMax, indexMax )
-				bi, ti, bo, to = AutoSteeringEngine.getAllChainBorders( vehicle, ASEGlobals.chainStart, indexMax )
-			end
+			AutoSteeringEngine.processChainSetAngle( vehicle, -1, indexMax, indexMax )
+			bi, ti, bo, to = AutoSteeringEngine.getAllChainBorders( vehicle, ASEGlobals.chainStart, indexMax )
 		
-			if     bi <= 0 and bo <= 0 and bw <= 0 then
+			if bi <= 0 and bo <= 0 then
 				-- there is nothing
 				vehicle.aseProcessChainInfo = "nothing found"
 				best  = { -1.4, indexMax, indexMax, -1, 0 }
@@ -488,7 +490,7 @@ function AutoSteeringEngine.processChain( vehicle, smooth, useBuffer, inField )
 						end
 						if bo > 0 then
 							vehicle.aseProcessChainInfo = vehicle.aseProcessChainInfo..string.format("bo>0: %2d %2d %2d %2d\n",step,j,bi,bo)
-							if j == j0 and ASEGlobals.debug2 > 0 then
+							if j == j0 then
 								-- too close to border => it will not get better
 								exitLoop = true
 							end
@@ -2065,7 +2067,7 @@ function AutoSteeringEngine.getAngleFactor( maxLooking )
 end
 
 ------------------------------------------------------------------------
--- getAngleFactor
+-- getAngleStep
 ------------------------------------------------------------------------
 function AutoSteeringEngine.getAngleStep( vehicle, j, af )
 	local f = ASEGlobals.angleStep + vehicle.aseChain.nodes[j].length * ASEGlobals.angleStepInc
@@ -2075,6 +2077,7 @@ function AutoSteeringEngine.getAngleStep( vehicle, j, af )
 	else
 		f = f - d
 	end
+	f = math.min( f, ASEGlobals.angleStepMax )
 	return f * af
 end
 
@@ -3934,6 +3937,11 @@ function AutoSteeringEngine.getSteeringParameterOfTool( vehicle, toolIndex, maxL
 	
 --  no reverse allowed	
 		local xOffset,_,zOffset = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.refNode )
+		if xOffset == nil or zOffset == nil then
+			xOffset = 0 
+			zOffset = 0 
+		end
+		
 		if tool.aiBackMarker ~= nil then
 			_,_,zb = AutoSteeringEngine.getRelativeTranslation( tool.steeringAxleNode, tool.aiBackMarker )
 			if zb == nil then zb = 0 end			
@@ -4334,12 +4342,14 @@ function AutoSteeringEngine.initSteering( vehicle )
 	vehicle.aseChain.chainStep1 = ASEGlobals.chain2Step1
 	vehicle.aseChain.chainStep2 = ASEGlobals.chain2Step2
 	vehicle.aseChain.chainStep3 = ASEGlobals.chain2Step3
+	vehicle.aseChain.chainStep4 = ASEGlobals.chain2Step4
 	if fixAttacher then
 		vehicle.aseChain.nodes      = vehicle.aseChain.nodesFix
 		vehicle.aseChain.chainStep0 = ASEGlobals.chainStep0
 		vehicle.aseChain.chainStep1 = ASEGlobals.chainStep1
 		vehicle.aseChain.chainStep2 = ASEGlobals.chainStep2
 		vehicle.aseChain.chainStep3 = ASEGlobals.chainStep3
+		vehicle.aseChain.chainStep4 = ASEGlobals.chainStep4
 	elseif ASEGlobals.angleFactorNoFix > 0 then
 		vehicle.aseChain.angleFactor = vehicle.aseChain.angleFactor * ASEGlobals.angleFactorNoFix
 	end
@@ -5014,7 +5024,7 @@ function AutoSteeringEngine.initTurnVector( vehicle, uTurn, turn2Outside )
 			end
 			
 			local lStart = 2
-			local lEnd   = 5
+			local lEnd   = 10
 			local lWidth = 1
 			
 			for f=0.0,1.5,0.1 do
@@ -5635,12 +5645,14 @@ function AutoSteeringEngine.initChain( vehicle, iRefNode, zOffset, wheelBase, ma
 	end	
 end
 
+------------------------------------------------------------------------
+-- deleteNode
+------------------------------------------------------------------------
 function AutoSteeringEngine.deleteNode( index, noUnlink )
 	return pcall(AutoSteeringEngine.deleteNode1, index, noUnlink )
 end
 
 function AutoSteeringEngine.deleteNode1( index, noUnlink )
-
 	if noUnlink then
 	else
 		unlink( index )

@@ -62,7 +62,7 @@ AutoTractor.saveAttributesMapping = { enabled         = { xml = "acEnabled",    
 																			widthOffset     = { xml = "acWidthOffset", tp = "F", default = 0 },
 																			turnOffset      = { xml = "acTurnOffset",  tp = "F", default = 0 },
 																			safetyFactor    = { xml = "acSafetyFactor",tp = "I", default = ASEGlobals.safetyFactor },
-																			angleFactor     = { xml = "acAngleFactor", tp = "F", default = 0.4 },
+																			angleFactor     = { xml = "acAngleFactorN",tp = "F", default = 1.0 },
 																			speedFactor     = { xml = "acSpeedFactor", tp = "F", default = 0.8 },																															
 																			noSteering      = { xml = "acNoSteering",  tp = "B", default = false } };																															
 AutoTractor.turnStageNoNext = { 21, 22, 23 } --{ 0 }
@@ -607,7 +607,15 @@ function AutoTractor:getMaxLookingAngleValue( noScale )
 end
 
 function AutoTractor:getAngleFactor(old)
-	new = string.format(old..": %2.1f°",math.deg(AutoTractor.getMaxLookingAngleValue( self )));
+
+	if      self.acParameters                  ~= nil
+			and self.acParameters.angleFactor      ~= nil then
+		new = string.format(old..": %2.1f°",math.deg(AutoTractor.getMaxLookingAngleValue( self )));
+		new = string.format(new.." / %3d%%",math.floor(20*self.acParameters.angleFactor+0.5) * 5)
+	else
+		return old
+	end
+	
 	return new
 end
 
@@ -1761,25 +1769,25 @@ function AutoTractor:checkState( onlyMaxLooking )
 	local c = 0;
 	if      self.acParameters.collision
 			and self.acParameters.upNDown
-			and self.acTurnStage ~=  -3 
-			and self.acTurnStage ~= -13 
-			and self.acTurnStage ~= -23 
+		--and self.acTurnStage ~=  -3 
+		--and self.acTurnStage ~= -13 
+		--and self.acTurnStage ~= -23 
 			then
 		c = self.acDimensions.collisionDist
 	end
 	if      self.acParameters.headland 
 			and self.acParameters.upNDown 
-			and self.acTurnStage ~=  -3 
-			and self.acTurnStage ~= -13 
-			and self.acTurnStage ~= -23 
+		--and self.acTurnStage ~=  -3 
+		--and self.acTurnStage ~= -13 
+		--and self.acTurnStage ~= -23 
 			then
 		h = self.acDimensions.headlandDist
 	end
 	
 	local maxLooking = self.acDimensions.maxLookingAngle
-	--if -10 < self.acTurnStage and self.acTurnStage ~= 0 and not AutoSteeringEngine.hasFruits( self, 1 ) then
-	--	maxLooking = self.acDimensions.maxSteeringAngle
-	--end
+	if self.acFullAngle then
+		maxLooking = self.acDimensions.maxSteeringAngle
+	end
 	
 	if self.acParameters.enabled then 
 		AutoSteeringEngine.initTools( self, maxLooking, self.acParameters.leftAreaActive, self.acParameters.widthOffset, self.acParameters.safetyFactor, h, c, self.acTurnMode );

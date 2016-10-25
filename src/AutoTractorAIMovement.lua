@@ -32,9 +32,20 @@ function AutoTractor:detectAngle( smooth )
 		self.acHighPrec = true
 	end
 
-	if b > 0 then
+	local oldFullAngle = self.acFullAngle
+	self.acFullAngle = false
+	
+	if     b > 0 then
 		d = false
+		self.acFullAngle = true
+	elseif self.acTurnStage > 0 then
+		self.acFullAngle = true
+	elseif oldFullAngle then
+		if math.abs( a ) > self.acDimensions.maxLookingAngle then
+			self.acFullAngle = true
+		end
 	end
+	
 	return d, a, b
 end
 
@@ -2288,7 +2299,8 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 		
 		elseif  fruitsAll 
 				and detected 
-				and self.acTurnInTheMiddle == nil then
+				and self.acTurnInTheMiddle == nil
+				and not ( self.acFullAngle ) then
 			if self.acClearTraceAfterTurn then
 				AutoSteeringEngine.clearTrace( self );
 				AutoSteeringEngine.saveDirection( self, false, not turn2Outside );
@@ -2516,7 +2528,9 @@ function AutoTractor:newUpdateAIMovement( superFunc, dt, ... )
 	end
 			
 --==============================================================				
-	
+	if self.acTurnStage > 0 then
+		self.acFullAngle = true
+	end
 
 	if     self.acTurnStage == -3 and detected then
 		AutoTractor.setStatus( self, 2 )
