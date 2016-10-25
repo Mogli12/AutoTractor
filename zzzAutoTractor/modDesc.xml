@@ -11,6 +11,10 @@
 	<title>
 		<en>Auto Tractor</en>
 		<de>Auto Traktor</de>
+		<fr>Auto Tractor</fr>
+		<it>Auto Tractor</it>
+		<ru>Auto Tractor</ru>
+		<cz>AutoTractor</cz>
 	</title>
 	<description>
 		<en>
@@ -23,6 +27,8 @@
 			<![CDATA[Auto Tractor - Traduzione italiana by Cristiano Magro]]></it>
 		<ru>
 			<![CDATA[Auto Tractor - умный тракторист. Перевод Gonimy Vetrom]]></ru>
+		<cz>
+			<![CDATA[AutoTractor - český překlad by Albi]]></cz>
 	</description>
 	<iconFilename>dds/store.dds</iconFilename>
 	<multiplayer supported="true"/>
@@ -40,5 +46,4 @@
 		<input name="AUTO_TRACTOR_STEERING"        category="VEHICLE" key1="KEY_lalt KEY_6"  key2="" button="" device="0" mouse="" />
 		<input name="AUTO_TRACTOR_RAISE"           category="VEHICLE" key1="KEY_lalt KEY_v"  key2="" button="" device="0" mouse="" />
 	</inputBindings>
-
 </modDesc>
