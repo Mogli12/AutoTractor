@@ -14,7 +14,8 @@
 		<fr>Auto Tractor</fr>
 		<it>Auto Tractor</it>
 		<ru>Auto Tractor</ru>
-		<cz>AutoTractor</cz>
+		<cz>Auto Tractor</cz>
+		<pl>Auto Tractor</pl>
 	</title>
 	<description>
 		<en>
@@ -28,7 +29,9 @@
 		<ru>
 			<![CDATA[Auto Tractor - умный тракторист. Перевод Gonimy Vetrom]]></ru>
 		<cz>
-			<![CDATA[AutoTractor - český překlad by Albi]]></cz>
+			<![CDATA[Auto Tractor - český překlad by Albi]]></cz>
+		<pl>
+			<![CDATA[Auto Tractor - Polskie tłumaczenie Dzi4d3k]]></pl>
 	</description>
 	<iconFilename>dds/store.dds</iconFilename>
 	<multiplayer supported="true"/>
