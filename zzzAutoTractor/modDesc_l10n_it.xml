@@ -33,8 +33,9 @@
 		<text name="AUTO_TRACTOR_REVERSE_OFF" text="Manovra [movimento]" />
 		<text name="AUTO_TRACTOR_INVERTED_ON" text="modo lavoro [reverse]" />
 		<text name="AUTO_TRACTOR_INVERTED_OFF" text="modo lavoro [normale]" />
-		<text name="AUTO_TRACTOR_WIDTH_OFFSET" text="larghezza offset" />
-		<text name="AUTO_TRACTOR_TURN_OFFSET" text="svolta offset" />
+		<text name="AUTO_TRACTOR_WIDTH_OFFSET" text="larghezza spostamento" />
+		<text name="AUTO_TRACTOR_TURN_OFFSET" text="spostamento svolta" />
+		<text name="AUTO_TRACTOR_ANGLE_OFFSET" text="anglolo di svolta" />
 		<text name="AUTO_TRACTOR_SAFETY_FACTOR" text="distanza di sicurezza" />
 		<text name="AUTO_TRACTOR_ERROR" text="errore" />
 		<text name="AUTO_TRACTOR_NEXTTURNSTAGE" text="vai prossimo turno di svolta" />
@@ -59,6 +60,13 @@
 		<text name="AUTO_TRACTOR_TURN_MODE_L" text="svolta di 90° piccola" />
 		<text name="AUTO_TRACTOR_TURN_MODE_K" text="svolta di 90° grande" />
 		<text name="AUTO_TRACTOR_TURN_MODE_8" text="svolta a U senza retro" />
+		<text name="AUTO_TRACTOR_PAUSE_ON"                 text="pausa [on]" />
+		<text name="AUTO_TRACTOR_PAUSE_OFF"                text="pausa [off]" />
+		<text name="AUTO_TRACTOR_STEER_RAISE"              text="solleva tutti gli attrezzi" />
+		<text name="AUTO_TRACTOR_STEER_LOWER"              text="abbassa tutti gli attrezzi" />
+		<text name="AUTO_TRACTOR_TRACE"                    text="mostra traccia" />
+		<text name="AUTO_TRACTOR_MAGIC"                    text="aggiorna il campo" />
+				
 		
 		<text name="AUTO_TRACTOR_1" text="livello velocità 1" />
 		<text name="AUTO_TRACTOR_2" text="livello velocità 2" />
